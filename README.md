@@ -40,6 +40,23 @@ $ make <targets> CC=clang CFLAGS='$(GNU_DBG) $(SANITIZE)'  # clang/gcc (debug wi
 $ make <targets> CC=clang CFLAGS='$(GNU_REL)'              # clang/gcc (release)
 ```
 
+## Installing
+The `install` target will install the Nova toolchain into the directory
+specified by `$NOVA_HOME` (default `$HOME/.nova`). Run `make install` with
+`$NOVA_HOME` specified as the directory of your choice, add `$NOVA_HOME` to your
+`.bashrc` (or equivalent), and then finally add `$NOVA_HOME/bin` to your your
+`$PATH` if necessary.
+```sh
+$ make install
+```
+```sh
+# Add this to your .bashrc
+if [ -d "$HOME/.nova" ]; then
+    NOVA_HOME="$HOME/.nova"
+    PATH="$NOVA_HOME/bin:$PATH"
+fi
+```
+
 ## License
 Nova is distributed under the terms of the Apache License (Version 2.0).
 

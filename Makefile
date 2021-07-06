@@ -3,6 +3,7 @@
 .PHONY: \
 	all \
 	test \
+	install \
 	format \
 	clean
 .SILENT: clean
@@ -27,6 +28,8 @@ CC = c99
 CFLAGS = $(C99_REL)
 INCS = -Ideps
 
+NOVA_HOME="$$HOME/.nova"
+
 all: bin/nova-compile test
 
 NOVA_COMPILE_OBJS = \
@@ -45,6 +48,10 @@ bin/nova-compile: $(NOVA_COMPILE_OBJS)
 
 test: bin/nova-compile
 	(cd tests/ && sh test-all.sh)
+
+install: bin/nova-compile
+	mkdir -p $(NOVA_HOME)
+	cp -r bin/ $(NOVA_HOME)
 
 format:
 	clang-format -i *.h *.c
