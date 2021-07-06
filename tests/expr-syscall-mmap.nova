@@ -1,0 +1,13 @@
+func mmap(addr: usize, length: usize, prot: ssize, flags: ssize, fd: ssize, offset: usize) ssize {
+    return syscall(9s, addr, length, prot, flags, fd, offset);
+}
+
+func main() void {
+    const prot: ssize = 0x3s; # PROT_READ | PROT_WRITE
+    const flags: ssize = 0x22s; # MAP_PRIVATE | MAP_ANONYMOUS
+
+    # Should page-align to 0xDEADB000.
+    dump mmap(0xDEADBEEFu, 4096u, prot, flags, -1s, 0u);
+}
+################################################################################
+# 00 B0 AD DE 00 00 00 00

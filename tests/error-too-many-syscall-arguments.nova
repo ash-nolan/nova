@@ -2,4 +2,4 @@ func main() void {
     syscall(1s, 2s, 3s, 4s, 5s, 6s, 7s, 8s, 9s, 10s);
 }
 ################################################################################
-# [error-too-many-syscall-arguments.nova:2] error: 10 syscall arguments provided (maximum 6 allowed)
+# [error-too-many-syscall-arguments.nova:2] error: 10 syscall arguments provided (maximum 7 allowed)

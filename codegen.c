@@ -808,8 +808,21 @@ codegen_rvalue_syscall(struct tir_expr const* expr)
     }
 
     assert(count != 0);
-    if (count > 2) {
-        TODO("syscalls with %zu arguments", count);
+    assert(count <= 7);
+    if (count == 7) {
+        appendli("pop r9 ; syscall parameter 6");
+    }
+    if (count >= 6) {
+        appendli("pop r8 ; syscall parameter 5");
+    }
+    if (count >= 5) {
+        appendli("pop r10 ; syscall parameter 4");
+    }
+    if (count >= 4) {
+        appendli("pop rdx ; syscall parameter 3");
+    }
+    if (count >= 3) {
+        appendli("pop rsi ; syscall parameter 2");
     }
     if (count >= 2) {
         appendli("pop rdi ; syscall parameter 1");

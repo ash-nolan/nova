@@ -635,7 +635,7 @@ tir_stmt_new_expr(
 // convention which allows for a maximum of six parameters plus the syscall
 // number to be passed via registers.
 #define SYSCALL_ARGUMENTS_MIN ((size_t)1)
-#define SYSCALL_ARGUMENTS_MAX ((size_t)6)
+#define SYSCALL_ARGUMENTS_MAX ((size_t)7)
 struct tir_expr {
     struct source_location const* location;
     struct type const* type;
