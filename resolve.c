@@ -494,8 +494,9 @@ resolve_stmt_if(struct resolver* resolver, struct ast_stmt const* stmt)
     autil_sbuf(struct tir_conditional const*) resolved_conditionals = NULL;
     autil_sbuf_resize(resolved_conditionals, autil_sbuf_count(conditionals));
     for (size_t i = 0; i < autil_sbuf_count(conditionals); ++i) {
-        bool const is_last = i == (autil_sbuf_count(conditionals) - 1);
-        assert(is_last || conditionals[i]->condition != NULL);
+        assert(
+            (conditionals[i]->condition != NULL)
+            || (i == (autil_sbuf_count(conditionals) - 1)));
 
         struct tir_expr const* condition = NULL;
         if (conditionals[i]->condition != NULL) {
