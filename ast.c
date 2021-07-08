@@ -106,6 +106,19 @@ ast_stmt_new_if(struct ast_conditional const* const* conditionals)
 }
 
 struct ast_stmt*
+ast_stmt_new_for_expr(struct source_location const* location, struct ast_expr const* expr, struct ast_block const* body)
+{
+    assert(location != NULL);
+    assert(expr != NULL);
+    assert(body != NULL);
+
+    struct ast_stmt* const self = ast_stmt_new(location, AST_STMT_FOR_EXPR);
+    self->data.for_expr.expr = expr;
+    self->data.for_expr.body = body;
+    return self;
+}
+
+struct ast_stmt*
 ast_stmt_new_decl(struct ast_decl const* decl)
 {
     assert(decl != NULL);

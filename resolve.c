@@ -47,6 +47,8 @@ resolve_stmt_decl(struct resolver* resolver, struct ast_stmt const* stmt);
 static struct tir_stmt const*
 resolve_stmt_if(struct resolver* resolver, struct ast_stmt const* stmt);
 static struct tir_stmt const*
+resolve_stmt_for_expr(struct resolver* resolver, struct ast_stmt const* stmt);
+static struct tir_stmt const*
 resolve_stmt_dump(struct resolver* resolver, struct ast_stmt const* stmt);
 static struct tir_stmt const*
 resolve_stmt_return(struct resolver* resolver, struct ast_stmt const* stmt);
@@ -424,6 +426,9 @@ resolve_stmt(struct resolver* resolver, struct ast_stmt const* stmt)
     case AST_STMT_IF: {
         return resolve_stmt_if(resolver, stmt);
     }
+    case AST_STMT_FOR_EXPR: {
+        return resolve_stmt_for_expr(resolver, stmt);
+    }
     case AST_STMT_DUMP: {
         return resolve_stmt_dump(resolver, stmt);
     }
@@ -510,7 +515,7 @@ resolve_stmt_if(struct resolver* resolver, struct ast_stmt const* stmt)
             }
         }
 
-        struct symbol_table* symbol_table =
+        struct symbol_table* const symbol_table =
             symbol_table_new(resolver->current_symbol_table);
         struct tir_block const* const block =
             resolve_block(resolver, symbol_table, conditionals[i]->body);
@@ -526,6 +531,37 @@ resolve_stmt_if(struct resolver* resolver, struct ast_stmt const* stmt)
 
     autil_sbuf_freeze(resolved_conditionals, context()->freezer);
     struct tir_stmt* const resolved = tir_stmt_new_if(resolved_conditionals);
+
+    autil_freezer_register(context()->freezer, resolved);
+    return resolved;
+}
+
+static struct tir_stmt const*
+resolve_stmt_for_expr(struct resolver* resolver, struct ast_stmt const* stmt)
+{
+    assert(resolver != NULL);
+    assert(!resolver_is_global(resolver));
+    assert(stmt != NULL);
+    assert(stmt->kind == AST_STMT_FOR_EXPR);
+    trace(resolver->module->path, NO_LINE, "%s", __func__);
+
+    struct tir_expr const* const expr = resolve_expr(resolver, stmt->data.for_expr.expr);
+    if (expr->type->kind != TYPE_BOOL) {
+        fatal(
+            expr->location->path,
+            expr->location->line,
+            "illegal condition with non-boolean type `%s`",
+            expr->type->name);
+    }
+
+    struct symbol_table* const symbol_table =
+        symbol_table_new(resolver->current_symbol_table);
+    struct tir_block const* const body = resolve_block(resolver, symbol_table, stmt->data.for_expr.body);
+    // Freeze the symbol table now that the block has been resolved and no new
+    // symbols will be added.
+    symbol_table_freeze(symbol_table, context()->freezer);
+
+    struct tir_stmt* const resolved = tir_stmt_new_for_expr(stmt->location, expr, body);
 
     autil_freezer_register(context()->freezer, resolved);
     return resolved;

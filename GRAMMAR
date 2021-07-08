@@ -12,6 +12,7 @@
 
 <stmt> ::= <stmt-decl>
          | <stmt-if>
+         | <stmt-for-expr>
          | <stmt-dump>
          | <stmt-return>
          | <stmt-assign>
@@ -20,6 +21,8 @@
 <stmt-decl> ::= <decl>
 
 <stmt-if> ::= "if" <expr> <block> ("elif" <expr> <block>)* ("else" <block>)?
+
+<stmt-for-expr> ::= "for" <expr> <block>
 
 <stmt-dump> ::= "dump" <expr> ";"
 

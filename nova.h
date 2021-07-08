@@ -144,6 +144,7 @@ enum token_kind {
     TOKEN_IF,
     TOKEN_ELIF,
     TOKEN_ELSE,
+    TOKEN_FOR,
     TOKEN_SYSCALL,
     // Sigils
     TOKEN_EQ, // ==
@@ -258,6 +259,7 @@ struct ast_stmt {
     enum ast_stmt_kind {
         AST_STMT_DECL,
         AST_STMT_IF,
+        AST_STMT_FOR_EXPR,
         AST_STMT_DUMP,
         AST_STMT_RETURN,
         AST_STMT_ASSIGN,
@@ -268,6 +270,10 @@ struct ast_stmt {
         struct {
             autil_sbuf(struct ast_conditional const* const) conditionals;
         } if_;
+        struct {
+            struct ast_expr const* expr;
+            struct ast_block const* body;
+        } for_expr;
         struct {
             struct ast_expr const* expr;
         } dump;
@@ -285,6 +291,8 @@ struct ast_stmt*
 ast_stmt_new_decl(struct ast_decl const* decl);
 struct ast_stmt*
 ast_stmt_new_if(struct ast_conditional const* const* conditionals);
+struct ast_stmt*
+ast_stmt_new_for_expr(struct source_location const* location, struct ast_expr const* expr, struct ast_block const* body);
 struct ast_stmt*
 ast_stmt_new_dump(
     struct source_location const* location, struct ast_expr const* expr);
@@ -591,6 +599,7 @@ struct tir_stmt {
     struct source_location const* location;
     enum tir_stmt_kind {
         TIR_STMT_IF,
+        TIR_STMT_FOR_EXPR,
         TIR_STMT_DUMP,
         TIR_STMT_RETURN,
         TIR_STMT_ASSIGN,
@@ -600,6 +609,10 @@ struct tir_stmt {
         struct {
             autil_sbuf(struct tir_conditional const* const) conditionals;
         } if_;
+        struct {
+            struct tir_expr const* expr;
+            struct tir_block const* body;
+        } for_expr;
         struct {
             struct tir_expr const* expr;
         } dump;
@@ -615,6 +628,8 @@ struct tir_stmt {
 };
 struct tir_stmt*
 tir_stmt_new_if(struct tir_conditional const* const* conditionals);
+struct tir_stmt*
+tir_stmt_new_for_expr(struct source_location const* location, struct tir_expr const* expr, struct tir_block const* body);
 struct tir_stmt*
 tir_stmt_new_dump(
     struct source_location const* location, struct tir_expr const* expr);

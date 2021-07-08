@@ -229,6 +229,8 @@ codegen_stmt(struct tir_stmt const* stmt);
 static void
 codegen_stmt_if(struct tir_stmt const* stmt);
 static void
+codegen_stmt_for_expr(struct tir_stmt const* stmt);
+static void
 codegen_stmt_dump(struct tir_stmt const* stmt);
 static void
 codegen_stmt_return(struct tir_stmt const* stmt);
@@ -529,6 +531,10 @@ codegen_stmt(struct tir_stmt const* stmt)
         codegen_stmt_if(stmt);
         return;
     }
+    case TIR_STMT_FOR_EXPR: {
+        codegen_stmt_for_expr(stmt);
+        return;
+    }
     case TIR_STMT_DUMP: {
         codegen_stmt_dump(stmt);
         return;
@@ -592,6 +598,32 @@ codegen_stmt_if(struct tir_stmt const* stmt)
         appendli("jmp .l%zu_stmt_if_end", stmt_id);
     }
     appendln(".l%zu_stmt_if_end:", stmt_id);
+}
+
+static void
+codegen_stmt_for_expr(struct tir_stmt const* stmt)
+{
+    assert(stmt != NULL);
+    assert(stmt->kind == TIR_STMT_FOR_EXPR);
+    trace(NO_PATH, NO_LINE, "%s", __func__);
+
+    size_t stmt_id = unique_id++;
+    appendln(".l%zu_stmt_for_expr_bgn:", stmt_id);
+    appendln(".l%zu_stmt_for_expr_condition:", stmt_id);
+    assert(stmt->data.for_expr.expr->type->kind == TYPE_BOOL);
+    codegen_rvalue(stmt->data.for_expr.expr);
+    appendli("pop rax");
+    appendli("mov rbx, 0x00");
+    appendli("cmp rax, rbx");
+    appendli("je .l%zu_stmt_for_expr_end", stmt_id);
+    appendln(".l%zu_stmt_for_expr_body:", stmt_id);
+    autil_sbuf(struct tir_stmt const* const) const stmts =
+        stmt->data.for_expr.body->stmts;
+    for (size_t i = 0; i < autil_sbuf_count(stmts); ++i) {
+        codegen_stmt(stmts[i]);
+    }
+    appendli("jmp .l%zu_stmt_for_expr_condition", stmt_id);
+    appendln(".l%zu_stmt_for_expr_end:", stmt_id);
 }
 
 static void

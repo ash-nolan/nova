@@ -43,6 +43,8 @@ parse_stmt(struct parser* parser);
 static struct ast_stmt const*
 parse_stmt_if(struct parser* parser);
 static struct ast_stmt const*
+parse_stmt_for_expr(struct parser* parser);
+static struct ast_stmt const*
 parse_stmt_dump(struct parser* parser);
 static struct ast_stmt const*
 parse_stmt_return(struct parser* parser);
@@ -311,6 +313,10 @@ parse_stmt(struct parser* parser)
         return parse_stmt_if(parser);
     }
 
+    if (check_current(parser, TOKEN_FOR)) {
+        return parse_stmt_for_expr(parser);
+    }
+
     if (check_current(parser, TOKEN_DUMP)) {
         return parse_stmt_dump(parser);
     }
@@ -377,6 +383,24 @@ parse_stmt_if(struct parser* parser)
 
     autil_sbuf_freeze(conditionals, context()->freezer);
     struct ast_stmt* const product = ast_stmt_new_if(conditionals);
+
+    autil_freezer_register(context()->freezer, product);
+    return product;
+}
+
+static struct ast_stmt const*
+parse_stmt_for_expr(struct parser* parser)
+{
+    assert(parser != NULL);
+    assert(check_current(parser, TOKEN_FOR));
+    trace(parser->module->path, NO_LINE, "%s", __func__);
+
+    struct source_location const* location =
+        &expect_current(parser, TOKEN_FOR)->location;
+    struct ast_expr const* const expr = parse_expr(parser);
+    struct ast_block const* const block = parse_block(parser);
+
+    struct ast_stmt* const product = ast_stmt_new_for_expr(location, expr, block);
 
     autil_freezer_register(context()->freezer, product);
     return product;
