@@ -312,14 +312,16 @@ tir_stmt_new_if(struct tir_conditional const* const* conditionals)
 }
 
 struct tir_stmt*
-tir_stmt_new_for_expr(struct source_location const* location, struct tir_expr const* expr, struct tir_block const* body)
+tir_stmt_new_for_expr(
+    struct source_location const* location,
+    struct tir_expr const* expr,
+    struct tir_block const* body)
 {
     assert(location != NULL);
     assert(expr != NULL);
     assert(body != NULL);
 
-    struct tir_stmt* const self =
-        tir_stmt_new(location, TIR_STMT_FOR_EXPR);
+    struct tir_stmt* const self = tir_stmt_new(location, TIR_STMT_FOR_EXPR);
     self->data.for_expr.expr = expr;
     self->data.for_expr.body = body;
     return self;

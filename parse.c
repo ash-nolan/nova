@@ -400,7 +400,8 @@ parse_stmt_for_expr(struct parser* parser)
     struct ast_expr const* const expr = parse_expr(parser);
     struct ast_block const* const block = parse_block(parser);
 
-    struct ast_stmt* const product = ast_stmt_new_for_expr(location, expr, block);
+    struct ast_stmt* const product =
+        ast_stmt_new_for_expr(location, expr, block);
 
     autil_freezer_register(context()->freezer, product);
     return product;

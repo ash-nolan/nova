@@ -545,7 +545,8 @@ resolve_stmt_for_expr(struct resolver* resolver, struct ast_stmt const* stmt)
     assert(stmt->kind == AST_STMT_FOR_EXPR);
     trace(resolver->module->path, NO_LINE, "%s", __func__);
 
-    struct tir_expr const* const expr = resolve_expr(resolver, stmt->data.for_expr.expr);
+    struct tir_expr const* const expr =
+        resolve_expr(resolver, stmt->data.for_expr.expr);
     if (expr->type->kind != TYPE_BOOL) {
         fatal(
             expr->location->path,
@@ -556,12 +557,14 @@ resolve_stmt_for_expr(struct resolver* resolver, struct ast_stmt const* stmt)
 
     struct symbol_table* const symbol_table =
         symbol_table_new(resolver->current_symbol_table);
-    struct tir_block const* const body = resolve_block(resolver, symbol_table, stmt->data.for_expr.body);
+    struct tir_block const* const body =
+        resolve_block(resolver, symbol_table, stmt->data.for_expr.body);
     // Freeze the symbol table now that the block has been resolved and no new
     // symbols will be added.
     symbol_table_freeze(symbol_table, context()->freezer);
 
-    struct tir_stmt* const resolved = tir_stmt_new_for_expr(stmt->location, expr, body);
+    struct tir_stmt* const resolved =
+        tir_stmt_new_for_expr(stmt->location, expr, body);
 
     autil_freezer_register(context()->freezer, resolved);
     return resolved;

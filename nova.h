@@ -292,7 +292,10 @@ ast_stmt_new_decl(struct ast_decl const* decl);
 struct ast_stmt*
 ast_stmt_new_if(struct ast_conditional const* const* conditionals);
 struct ast_stmt*
-ast_stmt_new_for_expr(struct source_location const* location, struct ast_expr const* expr, struct ast_block const* body);
+ast_stmt_new_for_expr(
+    struct source_location const* location,
+    struct ast_expr const* expr,
+    struct ast_block const* body);
 struct ast_stmt*
 ast_stmt_new_dump(
     struct source_location const* location, struct ast_expr const* expr);
@@ -629,7 +632,10 @@ struct tir_stmt {
 struct tir_stmt*
 tir_stmt_new_if(struct tir_conditional const* const* conditionals);
 struct tir_stmt*
-tir_stmt_new_for_expr(struct source_location const* location, struct tir_expr const* expr, struct tir_block const* body);
+tir_stmt_new_for_expr(
+    struct source_location const* location,
+    struct tir_expr const* expr,
+    struct tir_block const* body);
 struct tir_stmt*
 tir_stmt_new_dump(
     struct source_location const* location, struct tir_expr const* expr);

@@ -106,7 +106,10 @@ ast_stmt_new_if(struct ast_conditional const* const* conditionals)
 }
 
 struct ast_stmt*
-ast_stmt_new_for_expr(struct source_location const* location, struct ast_expr const* expr, struct ast_block const* body)
+ast_stmt_new_for_expr(
+    struct source_location const* location,
+    struct ast_expr const* expr,
+    struct ast_block const* body)
 {
     assert(location != NULL);
     assert(expr != NULL);
