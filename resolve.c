@@ -47,6 +47,8 @@ resolve_stmt_decl(struct resolver* resolver, struct ast_stmt const* stmt);
 static struct tir_stmt const*
 resolve_stmt_if(struct resolver* resolver, struct ast_stmt const* stmt);
 static struct tir_stmt const*
+resolve_stmt_for_range(struct resolver* resolver, struct ast_stmt const* stmt);
+static struct tir_stmt const*
 resolve_stmt_for_expr(struct resolver* resolver, struct ast_stmt const* stmt);
 static struct tir_stmt const*
 resolve_stmt_dump(struct resolver* resolver, struct ast_stmt const* stmt);
@@ -357,6 +359,9 @@ resolve_decl_function(struct resolver* resolver, struct ast_decl const* decl)
             address_new(address_init_local(rbp_offset));
         autil_freezer_register(context()->freezer, address);
 
+        // TODO: I think we need to round the offset += amount to the nearest
+        // 8-byte boundary.
+        assert(type->size <= 0x08);
         rbp_offset += 0x8;
         struct symbol* const symbol =
             symbol_new_variable(location, name, type, address, NULL);
@@ -425,6 +430,9 @@ resolve_stmt(struct resolver* resolver, struct ast_stmt const* stmt)
     }
     case AST_STMT_IF: {
         return resolve_stmt_if(resolver, stmt);
+    }
+    case AST_STMT_FOR_RANGE: {
+        return resolve_stmt_for_range(resolver, stmt);
     }
     case AST_STMT_FOR_EXPR: {
         return resolve_stmt_for_expr(resolver, stmt);
@@ -532,6 +540,67 @@ resolve_stmt_if(struct resolver* resolver, struct ast_stmt const* stmt)
     autil_sbuf_freeze(resolved_conditionals, context()->freezer);
     struct tir_stmt* const resolved = tir_stmt_new_if(resolved_conditionals);
 
+    autil_freezer_register(context()->freezer, resolved);
+    return resolved;
+}
+
+static struct tir_stmt const*
+resolve_stmt_for_range(struct resolver* resolver, struct ast_stmt const* stmt)
+{
+    assert(resolver != NULL);
+    assert(!resolver_is_global(resolver));
+    assert(stmt != NULL);
+    assert(stmt->kind == AST_STMT_FOR_RANGE);
+    trace(resolver->module->path, NO_LINE, "%s", __func__);
+
+    struct tir_expr const* const begin =
+        resolve_expr(resolver, stmt->data.for_range.begin);
+    if (begin->type != context()->builtin.usize) {
+        fatal(
+            begin->location->path,
+            begin->location->line,
+            "illegal range-begin-expression with non-usize type `%s`",
+            begin->type->name);
+    }
+
+    struct tir_expr const* const end =
+        resolve_expr(resolver, stmt->data.for_range.end);
+    if (end->type != context()->builtin.usize) {
+        fatal(
+            end->location->path,
+            end->location->line,
+            "illegal range-end-expression with non-usize type `%s`",
+            end->type->name);
+    }
+
+    int const save_rbp_offset = resolver->current_rbp_offset;
+    struct source_location const* const loop_var_location =
+        stmt->data.for_range.identifier->location;
+    char const* const loop_var_name = stmt->data.for_range.identifier->name;
+    struct type const* const loop_var_type = context()->builtin.usize;
+    struct address* const loop_var_address = address_new(
+        resolver_reserve_space(resolver, loop_var_name, loop_var_type));
+    autil_freezer_register(context()->freezer, loop_var_address);
+    struct symbol* const loop_var_symbol = symbol_new_variable(
+        loop_var_location,
+        loop_var_name,
+        loop_var_type,
+        loop_var_address,
+        NULL);
+    autil_freezer_register(context()->freezer, loop_var_symbol);
+
+    struct symbol_table* const symbol_table =
+        symbol_table_new(resolver->current_symbol_table);
+    symbol_table_insert(symbol_table, loop_var_symbol);
+    struct tir_block const* const body =
+        resolve_block(resolver, symbol_table, stmt->data.for_range.body);
+    // Freeze the symbol table now that the block has been resolved and no new
+    // symbols will be added.
+    symbol_table_freeze(symbol_table, context()->freezer);
+    resolver->current_rbp_offset = save_rbp_offset;
+
+    struct tir_stmt* const resolved = tir_stmt_new_for_range(
+        stmt->location, loop_var_symbol, begin, end, body);
     autil_freezer_register(context()->freezer, resolved);
     return resolved;
 }

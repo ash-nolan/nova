@@ -22,6 +22,8 @@
 
 <stmt-if> ::= "if" <expr> <block> ("elif" <expr> <block>)* ("else" <block>)?
 
+<stmt-for-range> ::= "for" <identifier> "in" <expr> ":" <expr> <block>
+
 <stmt-for-expr> ::= "for" <expr> <block>
 
 <stmt-dump> ::= "dump" <expr> ";"

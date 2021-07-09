@@ -229,6 +229,8 @@ codegen_stmt(struct tir_stmt const* stmt);
 static void
 codegen_stmt_if(struct tir_stmt const* stmt);
 static void
+codegen_stmt_for_range(struct tir_stmt const* stmt);
+static void
 codegen_stmt_for_expr(struct tir_stmt const* stmt);
 static void
 codegen_stmt_dump(struct tir_stmt const* stmt);
@@ -531,6 +533,10 @@ codegen_stmt(struct tir_stmt const* stmt)
         codegen_stmt_if(stmt);
         return;
     }
+    case TIR_STMT_FOR_RANGE: {
+        codegen_stmt_for_range(stmt);
+        return;
+    }
     case TIR_STMT_FOR_EXPR: {
         codegen_stmt_for_expr(stmt);
         return;
@@ -563,7 +569,7 @@ codegen_stmt_if(struct tir_stmt const* stmt)
     assert(stmt->kind == TIR_STMT_IF);
     trace(NO_PATH, NO_LINE, "%s", __func__);
 
-    size_t stmt_id = unique_id++;
+    size_t const stmt_id = unique_id++;
     autil_sbuf(struct tir_conditional const* const) const conditionals =
         stmt->data.if_.conditionals;
     appendln(".l%zu_stmt_if_bgn:", stmt_id);
@@ -601,13 +607,54 @@ codegen_stmt_if(struct tir_stmt const* stmt)
 }
 
 static void
+codegen_stmt_for_range(struct tir_stmt const* stmt)
+{
+    assert(stmt != NULL);
+    assert(stmt->kind == TIR_STMT_FOR_RANGE);
+    trace(NO_PATH, NO_LINE, "%s", __func__);
+
+    assert(
+        stmt->data.for_range.loop_variable->type == context()->builtin.usize);
+    assert(stmt->data.for_range.begin->type == context()->builtin.usize);
+    assert(stmt->data.for_range.end->type == context()->builtin.usize);
+    assert(stmt->data.for_range.loop_variable->address->kind == ADDRESS_LOCAL);
+    size_t const stmt_id = unique_id++;
+    appendln(".l%zu_stmt_for_range_bgn:", stmt_id);
+    push_address(stmt->data.for_range.loop_variable->address);
+    codegen_rvalue(stmt->data.for_range.begin);
+    appendli("pop rbx"); // begin
+    appendli("pop rax"); // addr of loop variable
+    appendli("mov [rax], rbx");
+    appendln(".l%zu_stmt_for_range_condition:", stmt_id);
+    push_at_address(
+        stmt->data.for_range.loop_variable->type->size,
+        stmt->data.for_range.loop_variable->address);
+    codegen_rvalue(stmt->data.for_range.end);
+    appendli("pop rbx"); // end
+    appendli("pop rax"); // loop variable
+    appendli("cmp rax, rbx");
+    appendli("je .l%zu_stmt_for_range_end", stmt_id);
+    appendln(".l%zu_stmt_for_range_body:", stmt_id);
+    autil_sbuf(struct tir_stmt const* const) const stmts =
+        stmt->data.for_range.body->stmts;
+    for (size_t i = 0; i < autil_sbuf_count(stmts); ++i) {
+        codegen_stmt(stmts[i]);
+    }
+    appendli(
+        "inc qword [rbp + %d]",
+        stmt->data.for_range.loop_variable->address->data.local.rbp_offset);
+    appendli("jmp .l%zu_stmt_for_range_condition", stmt_id);
+    appendln(".l%zu_stmt_for_range_end:", stmt_id);
+}
+
+static void
 codegen_stmt_for_expr(struct tir_stmt const* stmt)
 {
     assert(stmt != NULL);
     assert(stmt->kind == TIR_STMT_FOR_EXPR);
     trace(NO_PATH, NO_LINE, "%s", __func__);
 
-    size_t stmt_id = unique_id++;
+    size_t const stmt_id = unique_id++;
     appendln(".l%zu_stmt_for_expr_bgn:", stmt_id);
     appendln(".l%zu_stmt_for_expr_condition:", stmt_id);
     assert(stmt->data.for_expr.expr->type->kind == TYPE_BOOL);

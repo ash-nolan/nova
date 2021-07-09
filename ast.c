@@ -106,6 +106,28 @@ ast_stmt_new_if(struct ast_conditional const* const* conditionals)
 }
 
 struct ast_stmt*
+ast_stmt_new_for_range(
+    struct source_location const* location,
+    struct ast_identifier const* identifier,
+    struct ast_expr const* begin,
+    struct ast_expr const* end,
+    struct ast_block const* body)
+{
+    assert(location != NULL);
+    assert(identifier != NULL);
+    assert(begin != NULL);
+    assert(end != NULL);
+    assert(body != NULL);
+
+    struct ast_stmt* const self = ast_stmt_new(location, AST_STMT_FOR_RANGE);
+    self->data.for_range.identifier = identifier;
+    self->data.for_range.begin = begin;
+    self->data.for_range.end = end;
+    self->data.for_range.body = body;
+    return self;
+}
+
+struct ast_stmt*
 ast_stmt_new_for_expr(
     struct source_location const* location,
     struct ast_expr const* expr,

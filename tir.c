@@ -312,6 +312,32 @@ tir_stmt_new_if(struct tir_conditional const* const* conditionals)
 }
 
 struct tir_stmt*
+tir_stmt_new_for_range(
+    struct source_location const* location,
+    struct symbol const* loop_variable,
+    struct tir_expr const* begin,
+    struct tir_expr const* end,
+    struct tir_block const* body)
+{
+    assert(location != NULL);
+    assert(loop_variable != NULL);
+    assert(loop_variable->kind == SYMBOL_VARIABLE);
+    assert(loop_variable->type == context()->builtin.usize);
+    assert(begin != NULL);
+    assert(begin->type == context()->builtin.usize);
+    assert(end != NULL);
+    assert(end->type == context()->builtin.usize);
+    assert(body != NULL);
+
+    struct tir_stmt* const self = tir_stmt_new(location, TIR_STMT_FOR_RANGE);
+    self->data.for_range.loop_variable = loop_variable;
+    self->data.for_range.begin = begin;
+    self->data.for_range.end = end;
+    self->data.for_range.body = body;
+    return self;
+}
+
+struct tir_stmt*
 tir_stmt_new_for_expr(
     struct source_location const* location,
     struct tir_expr const* expr,

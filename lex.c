@@ -25,6 +25,7 @@ static struct autil_vstr token_kind_vstrs[TOKEN_EOF + 1u] = {
     [TOKEN_ELIF] = AUTIL_VSTR_INIT_STR_LITERAL("elif"),
     [TOKEN_ELSE] = AUTIL_VSTR_INIT_STR_LITERAL("else"),
     [TOKEN_FOR] = AUTIL_VSTR_INIT_STR_LITERAL("for"),
+    [TOKEN_IN] = AUTIL_VSTR_INIT_STR_LITERAL("in"),
     [TOKEN_SYSCALL] = AUTIL_VSTR_INIT_STR_LITERAL("syscall"),
     // Sigils
     [TOKEN_EQ] = AUTIL_VSTR_INIT_STR_LITERAL("=="),

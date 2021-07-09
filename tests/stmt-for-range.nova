@@ -1,0 +1,36 @@
+func seven() usize {
+    return 7u;
+}
+
+func main() void {
+    for n in 3u:7u {
+        dump n;
+    }
+
+    # Check that shadowing works correctly.
+    var i: usize = 0x42u;
+    for i in 0xAu:0xDu {
+        dump i;
+    }
+    dump i;
+
+    # Check that the range works with general expressions.
+    const begin: usize = 1u + 2u;
+    var end: usize = seven();
+    for i in begin:end {
+        dump i;
+    }
+}
+################################################################################
+# 03 00 00 00 00 00 00 00
+# 04 00 00 00 00 00 00 00
+# 05 00 00 00 00 00 00 00
+# 06 00 00 00 00 00 00 00
+# 0A 00 00 00 00 00 00 00
+# 0B 00 00 00 00 00 00 00
+# 0C 00 00 00 00 00 00 00
+# 42 00 00 00 00 00 00 00
+# 03 00 00 00 00 00 00 00
+# 04 00 00 00 00 00 00 00
+# 05 00 00 00 00 00 00 00
+# 06 00 00 00 00 00 00 00

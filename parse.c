@@ -23,6 +23,8 @@ static struct token const*
 advance_token(struct parser* parser);
 static bool
 check_current(struct parser const* parser, enum token_kind kind);
+static bool
+check_peek(struct parser const* parser, enum token_kind kind);
 static struct token const*
 expect_current(struct parser* parser, enum token_kind kind);
 
@@ -43,7 +45,7 @@ parse_stmt(struct parser* parser);
 static struct ast_stmt const*
 parse_stmt_if(struct parser* parser);
 static struct ast_stmt const*
-parse_stmt_for_expr(struct parser* parser);
+parse_stmt_for(struct parser* parser);
 static struct ast_stmt const*
 parse_stmt_dump(struct parser* parser);
 static struct ast_stmt const*
@@ -167,6 +169,14 @@ check_current(struct parser const* parser, enum token_kind kind)
     assert(parser != NULL);
 
     return parser->current_token->kind == kind;
+}
+
+static bool
+check_peek(struct parser const* parser, enum token_kind kind)
+{
+    assert(parser != NULL);
+
+    return parser->peek_token->kind == kind;
 }
 
 static struct token const*
@@ -314,7 +324,7 @@ parse_stmt(struct parser* parser)
     }
 
     if (check_current(parser, TOKEN_FOR)) {
-        return parse_stmt_for_expr(parser);
+        return parse_stmt_for(parser);
     }
 
     if (check_current(parser, TOKEN_DUMP)) {
@@ -389,7 +399,7 @@ parse_stmt_if(struct parser* parser)
 }
 
 static struct ast_stmt const*
-parse_stmt_for_expr(struct parser* parser)
+parse_stmt_for(struct parser* parser)
 {
     assert(parser != NULL);
     assert(check_current(parser, TOKEN_FOR));
@@ -397,11 +407,31 @@ parse_stmt_for_expr(struct parser* parser)
 
     struct source_location const* location =
         &expect_current(parser, TOKEN_FOR)->location;
+
+    // <stmt-for-range>
+    if (check_current(parser, TOKEN_IDENTIFIER)
+        && check_peek(parser, TOKEN_IN)) {
+        struct ast_identifier const* const identifier =
+            parse_identifier(parser);
+        expect_current(parser, TOKEN_IN);
+        struct ast_expr const* const begin = parse_expr(parser);
+        expect_current(parser, TOKEN_COLON);
+        struct ast_expr const* const end = parse_expr(parser);
+        struct ast_block const* const body = parse_block(parser);
+
+        struct ast_stmt* const product =
+            ast_stmt_new_for_range(location, identifier, begin, end, body);
+
+        autil_freezer_register(context()->freezer, product);
+        return product;
+    }
+
+    // <stmt-for-expr>
     struct ast_expr const* const expr = parse_expr(parser);
-    struct ast_block const* const block = parse_block(parser);
+    struct ast_block const* const body = parse_block(parser);
 
     struct ast_stmt* const product =
-        ast_stmt_new_for_expr(location, expr, block);
+        ast_stmt_new_for_expr(location, expr, body);
 
     autil_freezer_register(context()->freezer, product);
     return product;
