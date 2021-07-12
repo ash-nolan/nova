@@ -48,6 +48,15 @@ eval_expr(struct evaluator* evaluator, struct tir_expr const* expr)
         struct autil_bigint const* const integer = expr->data.integer;
         return value_new_integer(expr->type, autil_bigint_new(integer));
     }
+    case TIR_EXPR_ARRAY: {
+        autil_sbuf(struct tir_expr const* const) elements =
+            expr->data.array.elements;
+        autil_sbuf(struct value*) evaled_elements = NULL;
+        for (size_t i = 0; i < autil_sbuf_count(elements); ++i) {
+            autil_sbuf_push(evaled_elements, eval_expr(evaluator, elements[i]));
+        }
+        return value_new_array(expr->type, evaled_elements);
+    }
     case TIR_EXPR_SYSCALL: {
         fatal(
             expr->location->path,

@@ -250,6 +250,8 @@ codegen_rvalue_boolean(struct tir_expr const* expr);
 static void
 codegen_rvalue_integer(struct tir_expr const* expr);
 static void
+codegen_rvalue_array(struct tir_expr const* expr);
+static void
 codegen_rvalue_syscall(struct tir_expr const* expr);
 static void
 codegen_rvalue_call(struct tir_expr const* expr);
@@ -681,7 +683,7 @@ codegen_stmt_dump(struct tir_stmt const* stmt)
     trace(NO_PATH, NO_LINE, "%s", __func__);
 
     codegen_rvalue(stmt->data.expr);
-    appendli("push %zx", stmt->data.expr->type->size);
+    appendli("push %#zx", stmt->data.expr->type->size);
     appendli("call dump");
     appendli("pop rax", stmt->data.expr->type->size);
     pop(stmt->data.expr->type->size);
@@ -796,6 +798,10 @@ codegen_rvalue(struct tir_expr const* expr)
         codegen_rvalue_integer(expr);
         return;
     }
+    case TIR_EXPR_ARRAY: {
+        codegen_rvalue_array(expr);
+        return;
+    }
     case TIR_EXPR_SYSCALL: {
         codegen_rvalue_syscall(expr);
         return;
@@ -871,6 +877,55 @@ codegen_rvalue_integer(struct tir_expr const* expr)
     appendli("push rax");
 
     autil_xalloc(cstr, AUTIL_XALLOC_FREE);
+}
+
+static void
+codegen_rvalue_array(struct tir_expr const* expr)
+{
+    assert(expr != NULL);
+    assert(expr->kind == TIR_EXPR_ARRAY);
+    assert(expr->type->kind == TYPE_ARRAY);
+    trace(NO_PATH, NO_LINE, "%s", __func__);
+
+    // Make space for the array.
+    push(expr->type->size);
+
+    // One by one evaluate the rvalues for the elements of the array. Each
+    // element will be at the top of the stack after being evaluated, so the
+    // element is manually memcpy-ed into the correct position on the stack.
+    // This process feels like it would be somewhat slow, but unfortunately it
+    // seems necessary in order to keep the left-to-right evaluation order of
+    // array elements. Additionally pushing/popping to and from the stack uses
+    // 8-byte alignment, but arrays may have element alignment that does not
+    // cleanly match the stack alignment (e.g. [count]bool).
+    autil_sbuf(struct tir_expr const* const) const elements =
+        expr->data.array.elements;
+    struct type const* const element_type = expr->type->data.array.base;
+    size_t const element_size = element_type->size;
+    // TODO: This loop is manually unrolled here, but should probably be turned
+    // into an actual asm loop for elements with trivial initilization.
+    // Basically we should account for the scenario where a brainfuck
+    // interpreter allocates an array 30000 zeroed bytes, which would cause the
+    // equivalent of memcpy(&my_array[index], &my_zero, 0x8) inline thousands of
+    // times.
+    for (size_t i = 0; i < autil_sbuf_count(elements); ++i) {
+        assert(elements[i]->type == element_type);
+        codegen_rvalue(elements[i]);
+
+        // TODO: Replace this byte-by-byte memcpy with a cascading memcpy. Or
+        // perhaps we should add some `copy` function that takes a source and a
+        // destination address and does this for us? Maybe use it for assign
+        // stmts as well?
+        appendli("mov rbx, rsp");
+        appendli("add rbx, %zu", ceil8z(element_size)); // array start
+        appendli("add rbx, %zu", element_size * i); // array index
+        for (size_t ii = 0; ii < element_size; ++ii) {
+            appendli("mov al, [rsp + %#zu]", ii);
+            appendli("mov [rbx + %#zx], al", ii);
+        }
+
+        pop(element_size);
+    }
 }
 
 static void
@@ -1227,6 +1282,7 @@ codegen_lvalue(struct tir_expr const* expr)
     }
     case TIR_EXPR_BOOLEAN: /* fallthrough */
     case TIR_EXPR_INTEGER: /* fallthrough */
+    case TIR_EXPR_ARRAY: /* fallthrough */
     case TIR_EXPR_SYSCALL: /* fallthrough */
     case TIR_EXPR_CALL: /* fallthrough */
     case TIR_EXPR_UNARY: /* fallthrough */
@@ -1234,6 +1290,8 @@ codegen_lvalue(struct tir_expr const* expr)
         UNREACHABLE();
     }
     }
+
+    UNREACHABLE();
 }
 
 void

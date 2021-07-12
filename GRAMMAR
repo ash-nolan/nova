@@ -37,11 +37,14 @@
 <expr> ::= <identifier>
          | <boolean>
          | <integer>
+         | <expr-array>
          | <expr-grouped>
          | <expr-syscall>
          | <expr-call>
          | <expr-unary>
          | <expr-binary>
+
+<expr-array> ::= "(" ":" <typespec> ")" "[" (<expr> ("," <expr>)*)? "]"
 
 <expr-grouped> ::= "(" <expr> ")"
 
@@ -74,10 +77,13 @@
 
 <typespec> ::= <typespec-identifier>
              | <typespec-function>
+             | <typespec-array>
 
 <typespec-identifier> ::= <identifier>
 
 <typespec-function> ::= func "(" ( <typespec> ("," <typespec> )* )? ")" <typespec>
+
+<typespec-array> ::= "[" <expr> "]" <typespec>
 
 <identifier> ::= <letter> (<letter> | <digit-dec>)*
 

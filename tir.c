@@ -69,11 +69,52 @@ type_new_function(
     return self;
 }
 
+struct type*
+type_new_array(size_t count, struct type const* base)
+{
+    assert(base != NULL);
+
+    struct autil_string* const name_string =
+        autil_string_new_fmt("[%zu]%s", count, base->name);
+    char const* const name = autil_sipool_intern(
+        context()->sipool,
+        autil_string_start(name_string),
+        autil_string_count(name_string));
+    autil_string_del(name_string);
+
+    size_t const size = count * base->size;
+    assert((count == 0 || size / count == base->size) && "array size overflow");
+
+    struct type* const self = type_new(name, size, TYPE_ARRAY);
+    self->data.array.count = count;
+    self->data.array.base = base;
+    return self;
+}
+
 struct type const*
 type_unique_function(
     struct type const* const* parameter_types, struct type const* return_type)
 {
     struct type* const type = type_new_function(parameter_types, return_type);
+    struct symbol const* const existing =
+        symbol_table_lookup(context()->global_symbol_table, type->name);
+    if (existing != NULL) {
+        autil_xalloc(type, AUTIL_XALLOC_FREE);
+        return existing->type;
+    }
+
+    struct symbol* const symbol =
+        symbol_new_type(&context()->builtin.location, type);
+    symbol_table_insert(context()->global_symbol_table, symbol);
+    autil_freezer_register(context()->freezer, type);
+    autil_freezer_register(context()->freezer, symbol);
+    return type;
+}
+
+struct type const*
+type_unique_array(size_t count, struct type const* base)
+{
+    struct type* const type = type_new_array(count, base);
     struct symbol const* const existing =
         symbol_table_lookup(context()->global_symbol_table, type->name);
     if (existing != NULL) {
@@ -464,6 +505,21 @@ tir_expr_new_integer(
 }
 
 struct tir_expr*
+tir_expr_new_array(
+    struct source_location const* location,
+    struct type const* type,
+    struct tir_expr const* const* elements)
+{
+    assert(location != NULL);
+    assert(type != NULL);
+    assert(type->kind == TYPE_ARRAY);
+
+    struct tir_expr* const self = tir_expr_new(location, type, TIR_EXPR_ARRAY);
+    self->data.array.elements = elements;
+    return self;
+}
+
+struct tir_expr*
 tir_expr_new_syscall(
     struct source_location const* location, struct tir_expr const* const* exprs)
 {
@@ -550,6 +606,7 @@ tir_expr_is_lvalue(struct tir_expr const* self)
     }
     case TIR_EXPR_BOOLEAN: /* fallthrough */
     case TIR_EXPR_INTEGER: /* fallthrough */
+    case TIR_EXPR_ARRAY: /* fallthrough */
     case TIR_EXPR_SYSCALL: /* fallthrough */
     case TIR_EXPR_CALL: /* fallthrough */
     case TIR_EXPR_UNARY: /* fallthrough */
@@ -651,27 +708,52 @@ value_new_function(struct tir_function const* function)
     return self;
 }
 
+struct value*
+value_new_array(struct type const* type, struct value** elements)
+{
+    assert(type != NULL);
+    assert(type->kind == TYPE_ARRAY);
+    assert(type->data.array.count == autil_sbuf_count(elements));
+
+    struct value* self = value_new(type);
+    self->data.array.elements = elements;
+    return self;
+}
+
 void
 value_del(struct value* self)
 {
     assert(self != NULL);
 
     switch (self->type->kind) {
-    case TYPE_VOID:
-        UNREACHABLE();
-    case TYPE_BOOL:
-        break;
-    case TYPE_USIZE: /* fallthrough */
-    case TYPE_SSIZE:
-        autil_bigint_del(self->data.integer);
-        break;
-    case TYPE_FUNCTION:
-        break;
-    default:
+    case TYPE_VOID: {
         UNREACHABLE();
     }
+    case TYPE_BOOL: {
+        break;
+    }
+    case TYPE_USIZE: /* fallthrough */
+    case TYPE_SSIZE: {
+        autil_bigint_del(self->data.integer);
+        break;
+    }
+    case TYPE_FUNCTION: {
+        break;
+    }
+    case TYPE_ARRAY: {
+        autil_sbuf(struct value*) const elements = self->data.array.elements;
+        for (size_t i = 0; i < autil_sbuf_count(elements); ++i) {
+            value_del(elements[i]);
+        }
+        break;
+    }
+    default: {
+        UNREACHABLE();
+    }
+    }
 
-    autil_xalloc(memset(self, 0x00, sizeof(*self)), AUTIL_XALLOC_FREE);
+    memset(self, 0x00, sizeof(*self));
+    autil_xalloc(self, AUTIL_XALLOC_FREE);
 }
 
 void
@@ -682,19 +764,31 @@ value_freeze(struct value* self, struct autil_freezer* freezer)
 
     autil_freezer_register(freezer, self);
     switch (self->type->kind) {
-    case TYPE_VOID:
-        UNREACHABLE();
-    case TYPE_BOOL:
-        break;
-    case TYPE_USIZE: /* fallthrough */
-    case TYPE_SSIZE:
-        autil_bigint_freeze(self->data.integer, freezer);
-        break;
-    case TYPE_FUNCTION:
-        break;
-    default:
+    case TYPE_VOID: {
         UNREACHABLE();
     }
+    case TYPE_BOOL: {
+        return;
+    }
+    case TYPE_USIZE: /* fallthrough */
+    case TYPE_SSIZE: {
+        autil_bigint_freeze(self->data.integer, freezer);
+        return;
+    }
+    case TYPE_FUNCTION: {
+        return;
+    }
+    case TYPE_ARRAY: {
+        autil_sbuf(struct value*) const elements = self->data.array.elements;
+        autil_sbuf_freeze(elements, freezer);
+        for (size_t i = 0; i < autil_sbuf_count(elements); ++i) {
+            value_freeze(elements[i], freezer);
+        }
+        return;
+    }
+    }
+
+    UNREACHABLE();
 }
 
 struct value*
@@ -703,16 +797,28 @@ value_clone(struct value const* self)
     assert(self != NULL);
 
     switch (self->type->kind) {
-    case TYPE_VOID:
+    case TYPE_VOID: {
         UNREACHABLE();
-    case TYPE_BOOL:
+    }
+    case TYPE_BOOL: {
         return value_new_boolean(self->data.boolean);
+    }
     case TYPE_USIZE: /* fallthrough */
-    case TYPE_SSIZE:
+    case TYPE_SSIZE: {
         return value_new_integer(
             self->type, autil_bigint_new(self->data.integer));
-    case TYPE_FUNCTION:
+    }
+    case TYPE_FUNCTION: {
         return value_new_function(self->data.function);
+    }
+    case TYPE_ARRAY: {
+        autil_sbuf(struct value*) const elements = self->data.array.elements;
+        autil_sbuf(struct value*) cloned_elements = NULL;
+        for (size_t i = 0; i < autil_sbuf_count(elements); ++i) {
+            autil_sbuf_push(cloned_elements, value_clone(elements[i]));
+        }
+        return value_new_array(self->type, cloned_elements);
+    }
     }
 
     UNREACHABLE();
@@ -740,6 +846,9 @@ value_eq(struct value const* lhs, struct value const* rhs)
     }
     case TYPE_FUNCTION: {
         return lhs->data.function == rhs->data.function;
+    }
+    case TYPE_ARRAY: {
+        UNREACHABLE(); // illegal
     }
     }
 
@@ -770,6 +879,9 @@ value_lt(struct value const* lhs, struct value const* rhs)
         // Functions have no meaningful order in non-equality comparisons.
         return false;
     }
+    case TYPE_ARRAY: {
+        UNREACHABLE(); // illegal
+    }
     }
 
     UNREACHABLE();
@@ -799,6 +911,9 @@ value_gt(struct value const* lhs, struct value const* rhs)
         // Functions have no meaningful order in non-equality comparisons.
         return false;
     }
+    case TYPE_ARRAY: {
+        UNREACHABLE(); // illegal
+    }
     }
 
     UNREACHABLE();
@@ -810,7 +925,7 @@ value_to_new_bytes(struct value const* self)
 {
     assert(self != NULL);
 
-    uint8_t* bytes = NULL;
+    autil_sbuf(uint8_t) bytes = NULL;
     autil_sbuf_resize(bytes, self->type->size);
     autil_memset(bytes, 0x00, self->type->size);
 
@@ -870,6 +985,19 @@ value_to_new_bytes(struct value const* self)
         // assembler. There is no meaningful representation of a function's
         // address at compile time.
         UNREACHABLE();
+    }
+    case TYPE_ARRAY: {
+        autil_sbuf(struct value*) const elements = self->data.array.elements;
+        size_t const element_size = self->type->data.array.base->size;
+        size_t offset = 0;
+        for (size_t i = 0; i < autil_sbuf_count(elements); ++i) {
+            autil_sbuf(uint8_t) const element_bytes =
+                value_to_new_bytes(elements[i]);
+            autil_memmove(bytes + offset, element_bytes, element_size);
+            autil_sbuf_fini(element_bytes);
+            offset += element_size;
+        }
+        return bytes;
     }
     }
 

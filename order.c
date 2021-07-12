@@ -201,6 +201,14 @@ order_expr(struct orderer* orderer, struct ast_expr const* expr)
     case AST_EXPR_BOOLEAN: /* fallthrough */
     case AST_EXPR_INTEGER:
         return;
+    case AST_EXPR_ARRAY: {
+        autil_sbuf(struct ast_expr const* const) const elements =
+            expr->data.array.elements;
+        for (size_t i = 0; i < autil_sbuf_count(elements); ++i) {
+            order_expr(orderer, elements[i]);
+        }
+        return;
+    }
     case AST_EXPR_GROUPED: {
         order_expr(orderer, expr->data.grouped.expr);
         return;
@@ -263,6 +271,11 @@ order_typespec(struct orderer* orderer, struct ast_typespec const* typespec)
         }
 
         order_typespec(orderer, typespec->data.function.return_typespec);
+        return;
+    }
+    case TYPESPEC_ARRAY: {
+        order_expr(orderer, typespec->data.array.count);
+        order_typespec(orderer, typespec->data.array.base);
         return;
     }
     }

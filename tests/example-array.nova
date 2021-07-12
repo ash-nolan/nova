@@ -1,0 +1,88 @@
+const arr0: [3u]ssize = (:[3u]ssize)[1s, 3s, 5s];
+var arr1: [3u]ssize = (:[3u]ssize)[1s, 3s, 5s];
+
+func dump_arr_of_3_ssize(arr: [3u]ssize) void {
+    dump arr;
+}
+
+func main() void {
+    const arr2: [3u]ssize = (:[3u]ssize)[1s, 3s, 5s];
+    var arr3: [3u]ssize = (:[3u]ssize)[1s, 3s, 5s];
+
+    dump arr0;
+    dump arr1;
+    dump arr2;
+    dump arr3;
+
+    const arr4: [5u]bool = (:[5u]bool)[true, true, false, true, false];
+    var arr5: [5u]bool = (:[5u]bool)[true, true, false, true, false];
+    dump arr4;
+    dump arr5;
+
+    const arr6: [0u]ssize = (:[0u]ssize)[];
+    var arr7: [0u]ssize = (:[0u]ssize)[];
+    dump arr6;
+    dump arr7;
+
+    dump_arr_of_3_ssize(arr0);
+    dump_arr_of_3_ssize(arr1);
+    dump_arr_of_3_ssize(arr2);
+    dump_arr_of_3_ssize(arr3);
+
+    const arr8: [2u][3u]bool = (:[2u][3u]bool)[
+        (:[3u]bool)[true, false, true],
+        (:[3u]bool)[false, true, false]
+    ];
+    var arr9: [2u][3u]bool = (:[2u][3u]bool)[
+        (:[3u]bool)[true, false, true],
+        (:[3u]bool)[false, true, false]
+    ];
+    dump arr8;
+    dump arr9;
+
+    const arr10: [1u][1u][0u]ssize = (:[1u][1u][0u]ssize)[
+        (:[1u][0u]ssize)[
+            (:[0u]ssize)[]
+        ]
+    ];
+    const arr11: [1u][1u][0u]ssize = (:[1u][1u][0u]ssize)[
+        (:[1u][0u]ssize)[
+            (:[0u]ssize)[]
+        ]
+    ];
+    dump arr10;
+    dump arr11;
+
+    const arr12: [1u][1u][1u]ssize = (:[1u][1u][1u]ssize)[
+        (:[1u][1u]ssize)[
+            (:[1u]ssize)[0xFFFFFFFFFFFFFFFFs]
+        ]
+    ];
+    var arr13: [1u][1u][1u]ssize = (:[1u][1u][1u]ssize)[
+        (:[1u][1u]ssize)[
+            (:[1u]ssize)[0xFFFFFFFFFFFFFFFFs]
+        ]
+    ];
+    dump arr12;
+    dump arr13;
+}
+
+################################################################################
+# 01 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 05 00 00 00 00 00 00 00
+# 01 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 05 00 00 00 00 00 00 00
+# 01 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 05 00 00 00 00 00 00 00
+# 01 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 05 00 00 00 00 00 00 00
+# 01 01 00 01 00
+# 01 01 00 01 00
+#
+#
+# 01 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 05 00 00 00 00 00 00 00
+# 01 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 05 00 00 00 00 00 00 00
+# 01 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 05 00 00 00 00 00 00 00
+# 01 00 00 00 00 00 00 00 03 00 00 00 00 00 00 00 05 00 00 00 00 00 00 00
+# 01 00 01 00 01 00
+# 01 00 01 00 01 00
+#
+#
+# FF FF FF FF FF FF FF FF
+# FF FF FF FF FF FF FF FF

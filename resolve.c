@@ -1,6 +1,8 @@
 // Copyright 2021 The Nova Project Authors
 // SPDX-License-Identifier: Apache-2.0
 #include <assert.h>
+#include <errno.h>
+#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -67,6 +69,8 @@ static struct tir_expr const*
 resolve_expr_boolean(struct resolver* resolver, struct ast_expr const* expr);
 static struct tir_expr const*
 resolve_expr_integer(struct resolver* resolver, struct ast_expr const* expr);
+static struct tir_expr const*
+resolve_expr_array(struct resolver* resolver, struct ast_expr const* expr);
 static struct tir_expr const*
 resolve_expr_syscall(struct resolver* resolver, struct ast_expr const* expr);
 static struct tir_expr const*
@@ -359,10 +363,7 @@ resolve_decl_function(struct resolver* resolver, struct ast_decl const* decl)
             address_new(address_init_local(rbp_offset));
         autil_freezer_register(context()->freezer, address);
 
-        // TODO: I think we need to round the offset += amount to the nearest
-        // 8-byte boundary.
-        assert(type->size <= 0x08);
-        rbp_offset += 0x8;
+        rbp_offset += (int)ceil8z(type->size);
         struct symbol* const symbol =
             symbol_new_variable(location, name, type, address, NULL);
         autil_freezer_register(context()->freezer, symbol);
@@ -756,6 +757,9 @@ resolve_expr(struct resolver* resolver, struct ast_expr const* expr)
     case AST_EXPR_INTEGER: {
         return resolve_expr_integer(resolver, expr);
     }
+    case AST_EXPR_ARRAY: {
+        return resolve_expr_array(resolver, expr);
+    }
     case AST_EXPR_GROUPED: {
         return resolve_expr(resolver, expr->data.grouped.expr);
     }
@@ -870,6 +874,42 @@ resolve_expr_integer(struct resolver* resolver, struct ast_expr const* expr)
     assert(type != NULL);
     struct tir_expr* const resolved =
         tir_expr_new_integer(expr->location, type, value);
+
+    autil_freezer_register(context()->freezer, resolved);
+    return resolved;
+}
+
+static struct tir_expr const*
+resolve_expr_array(struct resolver* resolver, struct ast_expr const* expr)
+{
+    assert(resolver != NULL);
+    assert(expr != NULL);
+    assert(expr->kind == AST_EXPR_ARRAY);
+    trace(resolver->module->path, NO_LINE, "%s", __func__);
+
+    struct type const* const type =
+        resolve_typespec(resolver, expr->data.array.typespec);
+
+    autil_sbuf(struct ast_expr const* const) elements =
+        expr->data.array.elements;
+    autil_sbuf(struct tir_expr const*) resolved_elements = NULL;
+    for (size_t i = 0; i < autil_sbuf_count(elements); ++i) {
+        autil_sbuf_push(resolved_elements, resolve_expr(resolver, elements[i]));
+    }
+    autil_sbuf_freeze(resolved_elements, context()->freezer);
+
+    if (type->data.array.count != autil_sbuf_count(resolved_elements)) {
+        fatal(
+            expr->location->path,
+            expr->location->line,
+            "array of type `%s` created with %zu elements (expected %zu)",
+            type->name,
+            autil_sbuf_count(resolved_elements),
+            type->data.array.count);
+    }
+
+    struct tir_expr* const resolved =
+        tir_expr_new_array(expr->location, type, resolved_elements);
 
     autil_freezer_register(context()->freezer, resolved);
     return resolved;
@@ -1296,10 +1336,38 @@ resolve_typespec(struct resolver* resolver, struct ast_typespec const* typespec)
         struct type const* const return_type =
             resolve_typespec(resolver, typespec->data.function.return_typespec);
 
-        struct type const* const resolved =
-            type_unique_function(parameter_types, return_type);
+        return type_unique_function(parameter_types, return_type);
+    }
+    case TYPESPEC_ARRAY: {
+        struct tir_expr const* const count_expr =
+            resolve_expr(resolver, typespec->data.array.count);
+        if (count_expr->type != context()->builtin.usize) {
+            fatal(
+                count_expr->location->path,
+                count_expr->location->line,
+                "illegal array count with non-usize type `%s`",
+                count_expr->type->name);
+        }
 
-        return resolved;
+        struct evaluator* const evaluator =
+            evaluator_new(resolver->current_symbol_table);
+        struct value* const count_value = eval_expr(evaluator, count_expr);
+        evaluator_del(evaluator);
+
+        assert(count_value->type == context()->builtin.usize);
+        char* const count_cstr =
+            autil_bigint_to_new_cstr(count_value->data.integer, NULL);
+        value_del(count_value);
+
+        errno = 0;
+        uintmax_t count_umax = strtoumax(count_cstr, NULL, 0);
+        assert((errno == 0 && count_umax <= SIZE_MAX) && "out-of-range");
+        size_t count = (size_t)count_umax;
+        autil_xalloc(count_cstr, AUTIL_XALLOC_FREE);
+
+        struct type const* const base =
+            resolve_typespec(resolver, typespec->data.array.base);
+        return type_unique_array(count, base);
     }
     }
 

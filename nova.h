@@ -163,6 +163,8 @@ enum token_kind {
     TOKEN_RPAREN, // )
     TOKEN_LBRACE, // {
     TOKEN_RBRACE, // }
+    TOKEN_LBRACKET, // [
+    TOKEN_RBRACKET, // ]
     TOKEN_COMMA, // ,
     TOKEN_COLON, // :
     TOKEN_SEMICOLON, // ;
@@ -332,6 +334,7 @@ struct ast_expr {
         AST_EXPR_IDENTIFIER,
         AST_EXPR_BOOLEAN,
         AST_EXPR_INTEGER,
+        AST_EXPR_ARRAY,
         AST_EXPR_GROUPED,
         // Postfix Expressions
         AST_EXPR_CALL,
@@ -345,6 +348,10 @@ struct ast_expr {
         struct ast_identifier const* identifier;
         struct ast_boolean const* boolean;
         struct ast_integer const* integer;
+        struct {
+            struct ast_typespec const* typespec;
+            autil_sbuf(struct ast_expr const* const) elements;
+        } array;
         struct {
             struct ast_expr const* expr;
         } grouped;
@@ -372,6 +379,11 @@ struct ast_expr*
 ast_expr_new_boolean(struct ast_boolean const* boolean);
 struct ast_expr*
 ast_expr_new_integer(struct ast_integer const* integer);
+struct ast_expr*
+ast_expr_new_array(
+    struct source_location const* location,
+    struct ast_typespec const* typespec,
+    struct ast_expr const* const* elements);
 struct ast_expr*
 ast_expr_new_grouped(
     struct source_location const* location, struct ast_expr const* expr);
@@ -428,6 +440,7 @@ struct ast_typespec {
     enum typespec_kind {
         TYPESPEC_IDENTIFIER,
         TYPESPEC_FUNCTION,
+        TYPESPEC_ARRAY,
     } kind;
     union {
         struct ast_identifier const* identifier;
@@ -435,6 +448,10 @@ struct ast_typespec {
             autil_sbuf(struct ast_typespec const* const) parameter_typespecs;
             struct ast_typespec const* return_typespec;
         } function;
+        struct {
+            struct ast_expr const* count;
+            struct ast_typespec const* base;
+        } array;
     } data;
 };
 struct ast_typespec*
@@ -444,6 +461,11 @@ ast_typespec_new_function(
     struct source_location const* location,
     struct ast_typespec const* const* parameter_typespecs,
     struct ast_typespec const* return_typespec);
+struct ast_typespec*
+ast_typespec_new_array(
+    struct source_location const* location,
+    struct ast_expr const* count,
+    struct ast_typespec const* base);
 
 struct ast_identifier {
     struct source_location const* location;
@@ -496,12 +518,17 @@ struct type {
         TYPE_USIZE,
         TYPE_SSIZE,
         TYPE_FUNCTION,
+        TYPE_ARRAY,
     } kind;
     union {
         struct {
             autil_sbuf(struct type const* const) parameter_types;
             struct type const* return_type;
         } function;
+        struct {
+            size_t count;
+            struct type const* base;
+        } array;
     } data;
 };
 struct type*
@@ -515,10 +542,14 @@ type_new_ssize(void);
 struct type*
 type_new_function(
     struct type const* const* parameter_types, struct type const* return_type);
+struct type*
+type_new_array(size_t count, struct type const* base);
 
 struct type const*
 type_unique_function(
     struct type const* const* parameter_types, struct type const* return_type);
+struct type const*
+type_unique_array(size_t count, struct type const* base);
 
 bool
 type_is_integer(struct type const* self);
@@ -693,6 +724,7 @@ struct tir_expr {
         TIR_EXPR_IDENTIFIER,
         TIR_EXPR_BOOLEAN,
         TIR_EXPR_INTEGER,
+        TIR_EXPR_ARRAY,
         TIR_EXPR_SYSCALL,
         TIR_EXPR_CALL,
         TIR_EXPR_UNARY,
@@ -702,6 +734,9 @@ struct tir_expr {
         struct symbol const* identifier;
         bool boolean;
         struct autil_bigint const* integer;
+        struct {
+            autil_sbuf(struct tir_expr const* const) elements;
+        } array;
         struct {
             autil_sbuf(struct tir_expr const* const) exprs;
         } syscall;
@@ -749,6 +784,11 @@ tir_expr_new_integer(
     struct source_location const* location,
     struct type const* type,
     struct autil_bigint const* value);
+struct tir_expr*
+tir_expr_new_array(
+    struct source_location const* location,
+    struct type const* type,
+    struct tir_expr const* const* elements);
 struct tir_expr*
 tir_expr_new_syscall(
     struct source_location const* location,
@@ -831,6 +871,9 @@ struct value {
         bool boolean;
         struct autil_bigint* integer;
         struct tir_function const* function;
+        struct {
+            autil_sbuf(struct value*) elements;
+        } array;
     } data;
 };
 struct value*
@@ -839,6 +882,8 @@ struct value*
 value_new_integer(struct type const* type, struct autil_bigint* integer);
 struct value*
 value_new_function(struct tir_function const* function);
+struct value*
+value_new_array(struct type const* type, struct value** elements);
 void
 value_del(struct value* self);
 void

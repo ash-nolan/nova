@@ -246,6 +246,18 @@ ast_expr_new_integer(struct ast_integer const* integer)
 }
 
 struct ast_expr*
+ast_expr_new_array(
+    struct source_location const* location,
+    struct ast_typespec const* typespec,
+    struct ast_expr const* const* elements)
+{
+    struct ast_expr* const self = ast_expr_new(location, AST_EXPR_ARRAY);
+    self->data.array.typespec = typespec;
+    self->data.array.elements = elements;
+    return self;
+}
+
+struct ast_expr*
 ast_expr_new_grouped(
     struct source_location const* location, struct ast_expr const* expr)
 {
@@ -390,6 +402,23 @@ ast_typespec_new_function(
         ast_typespec_new(location, TYPESPEC_FUNCTION);
     self->data.function.parameter_typespecs = parameter_typespecs;
     self->data.function.return_typespec = return_typespec;
+    return self;
+}
+
+struct ast_typespec*
+ast_typespec_new_array(
+    struct source_location const* location,
+    struct ast_expr const* count,
+    struct ast_typespec const* base)
+{
+    assert(location != NULL);
+    assert(count != NULL);
+    assert(base != NULL);
+
+    struct ast_typespec* const self =
+        ast_typespec_new(location, TYPESPEC_ARRAY);
+    self->data.array.count = count;
+    self->data.array.base = base;
     return self;
 }
 

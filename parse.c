@@ -91,7 +91,7 @@ parse_expr_boolean(struct parser* parser);
 static struct ast_expr const*
 parse_expr_integer(struct parser* parser);
 static struct ast_expr const*
-parse_expr_grouped(struct parser* parser);
+parse_expr_lparen(struct parser* parser);
 static struct ast_expr const*
 parse_expr_syscall(struct parser* parser);
 static struct ast_expr const*
@@ -115,6 +115,8 @@ static struct ast_typespec const*
 parse_typespec_identifier(struct parser* parser);
 static struct ast_typespec const*
 parse_typespec_function(struct parser* parser);
+static struct ast_typespec const*
+parse_typespec_array(struct parser* parser);
 
 static struct ast_identifier const*
 parse_identifier(struct parser* parser);
@@ -540,7 +542,7 @@ token_kind_nud(enum token_kind kind)
     case TOKEN_INTEGER:
         return parse_expr_integer;
     case TOKEN_LPAREN:
-        return parse_expr_grouped;
+        return parse_expr_lparen;
     case TOKEN_SYSCALL:
         return parse_expr_syscall;
     case TOKEN_NOT: /* fallthrough */
@@ -667,13 +669,39 @@ parse_expr_integer(struct parser* parser)
 }
 
 static struct ast_expr const*
-parse_expr_grouped(struct parser* parser)
+parse_expr_lparen(struct parser* parser)
 {
     assert(parser != NULL);
     trace(parser->module->path, NO_LINE, "%s", __func__);
 
     struct source_location const* const location =
         &expect_current(parser, TOKEN_LPAREN)->location;
+
+    if (check_current(parser, TOKEN_COLON)) {
+        // <expr-array>
+        expect_current(parser, TOKEN_COLON);
+        struct ast_typespec const* const typespec = parse_typespec(parser);
+        expect_current(parser, TOKEN_RPAREN);
+
+        expect_current(parser, TOKEN_LBRACKET);
+        autil_sbuf(struct ast_expr const*) elements = NULL;
+        while (!check_current(parser, TOKEN_RBRACKET)) {
+            if (autil_sbuf_count(elements) != 0u) {
+                expect_current(parser, TOKEN_COMMA);
+            }
+            autil_sbuf_push(elements, parse_expr(parser));
+        }
+        autil_sbuf_freeze(elements, context()->freezer);
+        expect_current(parser, TOKEN_RBRACKET);
+
+        struct ast_expr* const product =
+            ast_expr_new_array(location, typespec, elements);
+
+        autil_freezer_register(context()->freezer, product);
+        return product;
+    }
+
+    // <expr-grouped>
     struct ast_expr const* const expr = parse_expr(parser);
     expect_current(parser, TOKEN_RPAREN);
     struct ast_expr* const product = ast_expr_new_grouped(location, expr);
@@ -834,6 +862,10 @@ parse_typespec(struct parser* parser)
         return parse_typespec_function(parser);
     }
 
+    if (check_current(parser, TOKEN_LBRACKET)) {
+        return parse_typespec_array(parser);
+    }
+
     fatal(
         parser->current_token->location.path,
         parser->current_token->location.line,
@@ -883,6 +915,26 @@ parse_typespec_function(struct parser* parser)
 
     struct ast_typespec* const product = ast_typespec_new_function(
         location, parameter_typespecs, return_typespec);
+
+    autil_freezer_register(context()->freezer, product);
+    return product;
+}
+
+static struct ast_typespec const*
+parse_typespec_array(struct parser* parser)
+{
+    assert(parser != NULL);
+    assert(check_current(parser, TOKEN_LBRACKET));
+    trace(parser->module->path, NO_LINE, "%s", __func__);
+
+    struct source_location const* const location =
+        &expect_current(parser, TOKEN_LBRACKET)->location;
+    struct ast_expr const* const count = parse_expr(parser);
+    expect_current(parser, TOKEN_RBRACKET);
+    struct ast_typespec const* const base = parse_typespec(parser);
+
+    struct ast_typespec* const product =
+        ast_typespec_new_array(location, count, base);
 
     autil_freezer_register(context()->freezer, product);
     return product;
