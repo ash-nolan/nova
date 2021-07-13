@@ -291,6 +291,22 @@ ast_expr_new_call(
 }
 
 struct ast_expr*
+ast_expr_new_index(
+    struct source_location const* location,
+    struct ast_expr const* lhs,
+    struct ast_expr const* idx)
+{
+    assert(location != NULL);
+    assert(lhs != NULL);
+    assert(idx != NULL);
+
+    struct ast_expr* const self = ast_expr_new(location, AST_EXPR_INDEX);
+    self->data.index.lhs = lhs;
+    self->data.index.idx = idx;
+    return self;
+}
+
+struct ast_expr*
 ast_expr_new_unary(struct token const* op, struct ast_expr const* rhs)
 {
     assert(op != NULL);

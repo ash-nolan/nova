@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 #include <assert.h>
 #include <errno.h>
+#include <inttypes.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
@@ -193,6 +194,32 @@ spawnvpw(char const* path, char const* const* argv)
     int status = 0;
     waitpid(pid, &status, 0);
     return status;
+}
+
+int
+bigint_to_uz(size_t* res, struct autil_bigint const* bigint)
+{
+    assert(bigint != NULL);
+
+    if (autil_bigint_cmp(bigint, AUTIL_BIGINT_ZERO) < 0) {
+        return -1;
+    }
+
+    char* const cstr = autil_bigint_to_new_cstr(bigint, NULL);
+    errno = 0;
+    uintmax_t umax = strtoumax(cstr, NULL, 0);
+    int const err = errno; // save errno
+    autil_xalloc(cstr, AUTIL_XALLOC_FREE);
+    assert(err == 0 || err == ERANGE);
+    if (err == ERANGE) {
+        return -1;
+    }
+
+    if (umax > SIZE_MAX) {
+        return -1;
+    }
+    *res = (size_t)umax;
+    return 0;
 }
 
 void

@@ -550,6 +550,24 @@ tir_expr_new_call(
 }
 
 struct tir_expr*
+tir_expr_new_index(
+    struct source_location const* location,
+    struct tir_expr const* lhs,
+    struct tir_expr const* idx)
+{
+    assert(location != NULL);
+    assert(lhs != NULL);
+    assert(lhs->type->kind == TYPE_ARRAY);
+    assert(idx != NULL);
+
+    struct type const* const type = lhs->type->data.array.base;
+    struct tir_expr* const self = tir_expr_new(location, type, TIR_EXPR_INDEX);
+    self->data.index.lhs = lhs;
+    self->data.index.idx = idx;
+    return self;
+}
+
+struct tir_expr*
 tir_expr_new_unary(
     struct source_location const* location,
     struct type const* type,
@@ -603,6 +621,9 @@ tir_expr_is_lvalue(struct tir_expr const* self)
             return false;
         }
         UNREACHABLE();
+    }
+    case TIR_EXPR_INDEX: {
+        return tir_expr_is_lvalue(self->data.index.lhs);
     }
     case TIR_EXPR_BOOLEAN: /* fallthrough */
     case TIR_EXPR_INTEGER: /* fallthrough */
@@ -745,6 +766,7 @@ value_del(struct value* self)
         for (size_t i = 0; i < autil_sbuf_count(elements); ++i) {
             value_del(elements[i]);
         }
+        autil_sbuf_fini(elements);
         break;
     }
     default: {

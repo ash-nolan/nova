@@ -47,6 +47,12 @@ ceil8i(int x);
 size_t
 ceil8z(size_t x);
 
+// Convert a bigint to size_t.
+// Returns zero on success.
+// Returns non-zero if the provided bigint is out-of-range.
+int
+bigint_to_uz(size_t* res, struct autil_bigint const* bigint);
+
 // Spawn a subprocess and wait for it to complete.
 // Returns the exit status of the spawned process.
 int
@@ -337,8 +343,9 @@ struct ast_expr {
         AST_EXPR_ARRAY,
         AST_EXPR_GROUPED,
         // Postfix Expressions
-        AST_EXPR_CALL,
         AST_EXPR_SYSCALL,
+        AST_EXPR_CALL,
+        AST_EXPR_INDEX,
         // Prefix Unary Operator Expressions
         AST_EXPR_UNARY,
         // Infix Binary Operator Expressions
@@ -362,6 +369,10 @@ struct ast_expr {
             struct ast_expr const* func;
             autil_sbuf(struct ast_expr const* const) arguments;
         } call;
+        struct {
+            struct ast_expr const* lhs;
+            struct ast_expr const* idx;
+        } index;
         struct {
             struct token const* op;
             struct ast_expr const* rhs;
@@ -394,6 +405,11 @@ ast_expr_new_syscall(
 struct ast_expr*
 ast_expr_new_call(
     struct ast_expr const* func, struct ast_expr const* const* arguments);
+struct ast_expr*
+ast_expr_new_index(
+    struct source_location const* location,
+    struct ast_expr const* lhs,
+    struct ast_expr const* idx);
 struct ast_expr*
 ast_expr_new_unary(struct token const* op, struct ast_expr const* rhs);
 struct ast_expr*
@@ -727,6 +743,7 @@ struct tir_expr {
         TIR_EXPR_ARRAY,
         TIR_EXPR_SYSCALL,
         TIR_EXPR_CALL,
+        TIR_EXPR_INDEX,
         TIR_EXPR_UNARY,
         TIR_EXPR_BINARY,
     } kind;
@@ -746,6 +763,10 @@ struct tir_expr {
             // Arguments to the callable function.
             autil_sbuf(struct tir_expr const* const) arguments;
         } call;
+        struct {
+            struct tir_expr const* lhs;
+            struct tir_expr const* idx;
+        } index;
         struct {
             enum uop_kind {
                 UOP_NOT,
@@ -798,6 +819,11 @@ tir_expr_new_call(
     struct source_location const* location,
     struct tir_expr const* function,
     struct tir_expr const* const* arguments);
+struct tir_expr*
+tir_expr_new_index(
+    struct source_location const* location,
+    struct tir_expr const* lhs,
+    struct tir_expr const* idx);
 struct tir_expr*
 tir_expr_new_unary(
     struct source_location const* location,

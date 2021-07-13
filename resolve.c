@@ -76,6 +76,8 @@ resolve_expr_syscall(struct resolver* resolver, struct ast_expr const* expr);
 static struct tir_expr const*
 resolve_expr_call(struct resolver* resolver, struct ast_expr const* expr);
 static struct tir_expr const*
+resolve_expr_index(struct resolver* resolver, struct ast_expr const* expr);
+static struct tir_expr const*
 resolve_expr_unary(struct resolver* resolver, struct ast_expr const* expr);
 static struct tir_expr const*
 resolve_expr_unary_logical(
@@ -769,6 +771,9 @@ resolve_expr(struct resolver* resolver, struct ast_expr const* expr)
     case AST_EXPR_CALL: {
         return resolve_expr_call(resolver, expr);
     }
+    case AST_EXPR_INDEX: {
+        return resolve_expr_index(resolver, expr);
+    }
     case AST_EXPR_UNARY: {
         return resolve_expr_unary(resolver, expr);
     }
@@ -1006,6 +1011,41 @@ resolve_expr_call(struct resolver* resolver, struct ast_expr const* expr)
 
     struct tir_expr* const resolved =
         tir_expr_new_call(expr->location, function, arguments);
+
+    autil_freezer_register(context()->freezer, resolved);
+    return resolved;
+}
+
+static struct tir_expr const*
+resolve_expr_index(struct resolver* resolver, struct ast_expr const* expr)
+{
+    assert(resolver != NULL);
+    assert(expr != NULL);
+    assert(expr->kind == AST_EXPR_INDEX);
+    trace(resolver->module->path, NO_LINE, "%s", __func__);
+
+    struct tir_expr const* const lhs =
+        resolve_expr(resolver, expr->data.index.lhs);
+    if (lhs->type->kind != TYPE_ARRAY) {
+        fatal(
+            lhs->location->path,
+            lhs->location->line,
+            "illegal index operation with left-hand-side of type `%s`",
+            lhs->type->name);
+    }
+
+    struct tir_expr const* const idx =
+        resolve_expr(resolver, expr->data.index.idx);
+    if (idx->type->kind != TYPE_USIZE) {
+        fatal(
+            idx->location->path,
+            idx->location->line,
+            "illegal index operation with index of non-usize type `%s`",
+            idx->type->name);
+    }
+
+    struct tir_expr* const resolved =
+        tir_expr_new_index(expr->location, lhs, idx);
 
     autil_freezer_register(context()->freezer, resolved);
     return resolved;
@@ -1355,15 +1395,17 @@ resolve_typespec(struct resolver* resolver, struct ast_typespec const* typespec)
         evaluator_del(evaluator);
 
         assert(count_value->type == context()->builtin.usize);
-        char* const count_cstr =
-            autil_bigint_to_new_cstr(count_value->data.integer, NULL);
+        size_t count = 0u;
+        if (bigint_to_uz(&count, count_value->data.integer)) {
+            char* const cstr =
+                autil_bigint_to_new_cstr(count_value->data.integer, NULL);
+            fatal(
+                count_expr->location->path,
+                count_expr->location->line,
+                "array count too large (received %s)",
+                cstr);
+        }
         value_del(count_value);
-
-        errno = 0;
-        uintmax_t count_umax = strtoumax(count_cstr, NULL, 0);
-        assert((errno == 0 && count_umax <= SIZE_MAX) && "out-of-range");
-        size_t count = (size_t)count_umax;
-        autil_xalloc(count_cstr, AUTIL_XALLOC_FREE);
 
         struct type const* const base =
             resolve_typespec(resolver, typespec->data.array.base);

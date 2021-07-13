@@ -69,6 +69,39 @@ eval_expr(struct evaluator* evaluator, struct tir_expr const* expr)
             expr->location->line,
             "constant expression contains function call");
     }
+    case TIR_EXPR_INDEX: {
+        struct value* const lhs = eval_expr(evaluator, expr->data.index.lhs);
+        struct value* const idx = eval_expr(evaluator, expr->data.index.idx);
+        assert(lhs->type->kind == TYPE_ARRAY);
+        assert(idx->type->kind == TYPE_USIZE);
+
+        size_t idx_uz = 0u;
+        if (bigint_to_uz(&idx_uz, idx->data.integer)) {
+            char* const cstr =
+                autil_bigint_to_new_cstr(idx->data.integer, NULL);
+            fatal(
+                expr->data.index.idx->location->path,
+                expr->data.index.idx->location->line,
+                "index out-of-range (received %s)",
+                cstr);
+        }
+
+        if (idx_uz >= lhs->type->data.array.count) {
+            char* const cstr =
+                autil_bigint_to_new_cstr(idx->data.integer, NULL);
+            fatal(
+                expr->data.index.idx->location->path,
+                expr->data.index.idx->location->line,
+                "index out-of-bounds (array count is %zu, received %s)",
+                lhs->type->data.array.count,
+                cstr);
+        }
+
+        struct value* const res = value_clone(lhs->data.array.elements[idx_uz]);
+        value_del(lhs);
+        value_del(idx);
+        return res;
+    }
     case TIR_EXPR_UNARY: {
         struct value* const rhs = eval_expr(evaluator, expr->data.unary.rhs);
         switch (expr->data.unary.op) {

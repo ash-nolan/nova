@@ -256,6 +256,8 @@ codegen_rvalue_syscall(struct tir_expr const* expr);
 static void
 codegen_rvalue_call(struct tir_expr const* expr);
 static void
+codegen_rvalue_index(struct tir_expr const* expr);
+static void
 codegen_rvalue_unary(struct tir_expr const* expr);
 static void
 codegen_rvalue_binary(struct tir_expr const* expr);
@@ -810,6 +812,10 @@ codegen_rvalue(struct tir_expr const* expr)
         codegen_rvalue_call(expr);
         return;
     }
+    case TIR_EXPR_INDEX: {
+        codegen_rvalue_index(expr);
+        return;
+    }
     case TIR_EXPR_UNARY: {
         codegen_rvalue_unary(expr);
         return;
@@ -903,7 +909,7 @@ codegen_rvalue_array(struct tir_expr const* expr)
     struct type const* const element_type = expr->type->data.array.base;
     size_t const element_size = element_type->size;
     // TODO: This loop is manually unrolled here, but should probably be turned
-    // into an actual asm loop for elements with trivial initilization.
+    // into an actual asm loop for elements with trivial initialization.
     // Basically we should account for the scenario where a brainfuck
     // interpreter allocates an array 30000 zeroed bytes, which would cause the
     // equivalent of memcpy(&my_array[index], &my_zero, 0x8) inline thousands of
@@ -1000,6 +1006,68 @@ codegen_rvalue_call(struct tir_expr const* expr)
     for (size_t i = autil_sbuf_count(arguments); i--;) {
         appendli("pop rax");
     }
+}
+
+static void
+codegen_rvalue_index(struct tir_expr const* expr)
+{
+    assert(expr != NULL);
+    assert(expr->kind == TIR_EXPR_INDEX);
+    assert(expr->data.index.lhs->type->kind == TYPE_ARRAY);
+    assert(expr->data.index.idx->type->kind == TYPE_USIZE);
+    trace(NO_PATH, NO_LINE, "%s", __func__);
+
+    struct type const* const lhs_type = expr->data.index.lhs->type;
+    struct type const* const element_type = lhs_type->data.array.base;
+
+    // Push space for result.
+    assert(expr->type == element_type);
+    push(expr->type->size);
+
+    if (tir_expr_is_lvalue(expr->data.index.lhs)) {
+        // Array expression is an lvalue. Compute the address of the of the
+        // indexed element and copy from that address into the result.
+        codegen_lvalue(expr->data.index.lhs);
+        codegen_rvalue(expr->data.index.idx);
+        // rax := source
+        // rsp := destination
+        // After calculating the source address the stack pointer will point to
+        // the result since space for the result space was pushed onto the
+        // stack.
+        appendli("pop rax"); // index
+        appendli("mov rbx, %zu", element_type->size);
+        appendli("mul rbx"); // index * sizeof(element_type)
+        appendli("pop rbx"); // start
+        appendli("add rax, rbx"); // start + index * sizeof(element_type)
+        // copy
+        for (size_t i = 0; i < element_type->size; ++i) {
+            appendli("mov cl, [rax + %#zu]", i);
+            appendli("mov [rsp + %#zx], cl", i);
+        }
+
+        return;
+    }
+
+    // Array expression is an rvalue. Generate the rvalue array and rvalue
+    // index. Then copy indexed element into the result.
+    codegen_rvalue(expr->data.index.lhs);
+    codegen_rvalue(expr->data.index.idx);
+    // rax := source
+    appendli("pop rax"); // index
+    appendli("mov rbx, %zu", element_type->size);
+    appendli("mul rbx"); // index * sizeof(element_type)
+    appendli("add rax, rsp"); // start + index * sizeof(element_type)
+    // rbx := destination
+    appendli("mov rbx, %zu", lhs_type->size); // sizeof(array)
+    appendli("add rbx, rsp", lhs_type); // start  + sizeof(array)
+    // copy
+    for (size_t i = 0; i < element_type->size; ++i) {
+        appendli("mov cl, [rax + %#zu]", i);
+        appendli("mov [rbx + %#zx], cl", i);
+    }
+
+    // Pop array rvalue.
+    pop(lhs_type->size);
 }
 
 static void
@@ -1278,6 +1346,19 @@ codegen_lvalue(struct tir_expr const* expr)
     switch (expr->kind) {
     case TIR_EXPR_IDENTIFIER: {
         push_address(expr->data.identifier->address);
+        return;
+    }
+    case TIR_EXPR_INDEX: {
+        codegen_lvalue(expr->data.index.lhs);
+        codegen_rvalue(expr->data.index.idx);
+        struct type const* const lhs_type = expr->data.index.lhs->type;
+        struct type const* const element_type = lhs_type->data.array.base;
+        appendli("pop rax"); // index
+        appendli("mov rbx, %zu", element_type->size); // sizeof(element_type)
+        appendli("mul rbx"); // index * sizeof(element_type)
+        appendli("pop rbx"); // start
+        appendli("add rax, rbx"); // start + index * sizeof(element_type)
+        appendli("push rax");
         return;
     }
     case TIR_EXPR_BOOLEAN: /* fallthrough */

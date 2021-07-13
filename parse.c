@@ -97,6 +97,8 @@ parse_expr_syscall(struct parser* parser);
 static struct ast_expr const*
 parse_expr_led_call(struct parser* parser, struct ast_expr const* lhs);
 static struct ast_expr const*
+parse_expr_led_index(struct parser* parser, struct ast_expr const* lhs);
+static struct ast_expr const*
 parse_expr_nud_unary(struct parser* parser);
 static struct ast_expr const*
 parse_expr_led_binary(struct parser* parser, struct ast_expr const* lhs);
@@ -513,7 +515,8 @@ token_kind_precedence(enum token_kind kind)
     case TOKEN_STAR: /* fallthrough */
     case TOKEN_FSLASH:
         return PRECEDENCE_PRODUCT;
-    case TOKEN_LPAREN:
+    case TOKEN_LPAREN: /* fallthrough */
+    case TOKEN_LBRACKET:
         return PRECEDENCE_POSTFIX;
     default:
         break;
@@ -563,6 +566,8 @@ token_kind_led(enum token_kind kind)
     switch (kind) {
     case TOKEN_LPAREN:
         return parse_expr_led_call;
+    case TOKEN_LBRACKET:
+        return parse_expr_led_index;
     case TOKEN_OR: /* fallthrough */
     case TOKEN_AND: /* fallthrough */
     case TOKEN_EQ: /* fallthrough */
@@ -752,6 +757,23 @@ parse_expr_led_call(struct parser* parser, struct ast_expr const* lhs)
     autil_sbuf_freeze(args, context()->freezer);
     expect_current(parser, TOKEN_RPAREN);
     struct ast_expr* const product = ast_expr_new_call(lhs, args);
+
+    autil_freezer_register(context()->freezer, product);
+    return product;
+}
+
+static struct ast_expr const*
+parse_expr_led_index(struct parser* parser, struct ast_expr const* lhs)
+{
+    assert(parser != NULL);
+    assert(lhs != NULL);
+    trace(parser->module->path, NO_LINE, "%s", __func__);
+
+    struct source_location const* const location =
+        &expect_current(parser, TOKEN_LBRACKET)->location;
+    struct ast_expr const* const idx = parse_expr(parser);
+    expect_current(parser, TOKEN_RBRACKET);
+    struct ast_expr* const product = ast_expr_new_index(location, lhs, idx);
 
     autil_freezer_register(context()->freezer, product);
     return product;

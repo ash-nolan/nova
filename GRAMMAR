@@ -41,6 +41,7 @@
          | <expr-grouped>
          | <expr-syscall>
          | <expr-call>
+         | <expr-index>
          | <expr-unary>
          | <expr-binary>
 
@@ -48,9 +49,11 @@
 
 <expr-grouped> ::= "(" <expr> ")"
 
+<expr-syscall> ::= "syscall" "(" <expr> ("," <expr>)* ")"
+
 <expr-call> ::= <expr> "(" (<expr> ("," <expr>)*)? ")"
 
-<expr-syscall> ::= "syscall" "(" <expr> ("," <expr>)* ")"
+<expr-index> ::= <expr> "[" <expr> "]"
 
 <expr-unary> ::= "not" <expr>
                | "+" <expr>
