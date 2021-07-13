@@ -1,8 +1,6 @@
 // Copyright 2021 The Nova Project Authors
 // SPDX-License-Identifier: Apache-2.0
 #include <assert.h>
-#include <errno.h>
-#include <inttypes.h>
 #include <stdlib.h>
 #include <string.h>
 
