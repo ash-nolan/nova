@@ -58,6 +58,8 @@
 <expr-unary> ::= "not" <expr>
                | "+" <expr>
                | "-" <expr>
+               | "*" <expr>
+               | "&" <expr>
 
 <expr-binary> ::= <expr> "or" <expr>
                 | <expr> "and" <expr>
@@ -80,11 +82,14 @@
 
 <typespec> ::= <typespec-identifier>
              | <typespec-function>
+             | <typespec-pointer>
              | <typespec-array>
 
 <typespec-identifier> ::= <identifier>
 
 <typespec-function> ::= func "(" ( <typespec> ("," <typespec> )* )? ")" <typespec>
+
+<typespec-pointer> ::= "*" <typespec>
 
 <typespec-array> ::= "[" <expr> "]" <typespec>
 

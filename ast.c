@@ -422,6 +422,19 @@ ast_typespec_new_function(
 }
 
 struct ast_typespec*
+ast_typespec_new_pointer(
+    struct source_location const* location, struct ast_typespec const* base)
+{
+    assert(location != NULL);
+    assert(base != NULL);
+
+    struct ast_typespec* const self =
+        ast_typespec_new(location, TYPESPEC_POINTER);
+    self->data.pointer.base = base;
+    return self;
+}
+
+struct ast_typespec*
 ast_typespec_new_array(
     struct source_location const* location,
     struct ast_expr const* count,

@@ -60,7 +60,7 @@ enum precedence {
     PRECEDENCE_COMPARE, // ==
     PRECEDENCE_SUM, // + -
     PRECEDENCE_PRODUCT, // * /
-    PRECEDENCE_PREFIX, // +x OR -x
+    PRECEDENCE_PREFIX, // +x OR -x OR *x OR &x
     PRECEDENCE_POSTFIX, // foo(bar, 123) OR foo[42]
 };
 // Returns the precedence corresponding to provided token or PRECEDENCE_LOWEST
@@ -117,6 +117,8 @@ static struct ast_typespec const*
 parse_typespec_identifier(struct parser* parser);
 static struct ast_typespec const*
 parse_typespec_function(struct parser* parser);
+static struct ast_typespec const*
+parse_typespec_pointer(struct parser* parser);
 static struct ast_typespec const*
 parse_typespec_array(struct parser* parser);
 
@@ -550,7 +552,9 @@ token_kind_nud(enum token_kind kind)
         return parse_expr_syscall;
     case TOKEN_NOT: /* fallthrough */
     case TOKEN_PLUS: /* fallthrough */
-    case TOKEN_DASH:
+    case TOKEN_DASH: /* fallthrough */
+    case TOKEN_STAR: /* fallthrough */
+    case TOKEN_AMPERSAND:
         return parse_expr_nud_unary;
     default:
         break;
@@ -884,6 +888,10 @@ parse_typespec(struct parser* parser)
         return parse_typespec_function(parser);
     }
 
+    if (check_current(parser, TOKEN_STAR)) {
+        return parse_typespec_pointer(parser);
+    }
+
     if (check_current(parser, TOKEN_LBRACKET)) {
         return parse_typespec_array(parser);
     }
@@ -937,6 +945,25 @@ parse_typespec_function(struct parser* parser)
 
     struct ast_typespec* const product = ast_typespec_new_function(
         location, parameter_typespecs, return_typespec);
+
+    autil_freezer_register(context()->freezer, product);
+    return product;
+}
+
+static struct ast_typespec const*
+parse_typespec_pointer(struct parser* parser)
+{
+    assert(parser != NULL);
+    assert(check_current(parser, TOKEN_STAR));
+    trace(parser->module->path, NO_LINE, "%s", __func__);
+
+    struct source_location const* const location =
+        &expect_current(parser, TOKEN_STAR)->location;
+
+    struct ast_typespec const* const base = parse_typespec(parser);
+
+    struct ast_typespec* const product =
+        ast_typespec_new_pointer(location, base);
 
     autil_freezer_register(context()->freezer, product);
     return product;

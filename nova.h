@@ -165,6 +165,7 @@ enum token_kind {
     TOKEN_DASH, // -
     TOKEN_STAR, // *
     TOKEN_FSLASH, // /
+    TOKEN_AMPERSAND, // &
     TOKEN_LPAREN, // (
     TOKEN_RPAREN, // )
     TOKEN_LBRACE, // {
@@ -456,6 +457,7 @@ struct ast_typespec {
     enum typespec_kind {
         TYPESPEC_IDENTIFIER,
         TYPESPEC_FUNCTION,
+        TYPESPEC_POINTER,
         TYPESPEC_ARRAY,
     } kind;
     union {
@@ -464,6 +466,9 @@ struct ast_typespec {
             autil_sbuf(struct ast_typespec const* const) parameter_typespecs;
             struct ast_typespec const* return_typespec;
         } function;
+        struct {
+            struct ast_typespec const* base;
+        } pointer;
         struct {
             struct ast_expr const* count;
             struct ast_typespec const* base;
@@ -477,6 +482,9 @@ ast_typespec_new_function(
     struct source_location const* location,
     struct ast_typespec const* const* parameter_typespecs,
     struct ast_typespec const* return_typespec);
+struct ast_typespec*
+ast_typespec_new_pointer(
+    struct source_location const* location, struct ast_typespec const* base);
 struct ast_typespec*
 ast_typespec_new_array(
     struct source_location const* location,
@@ -534,6 +542,7 @@ struct type {
         TYPE_USIZE,
         TYPE_SSIZE,
         TYPE_FUNCTION,
+        TYPE_POINTER,
         TYPE_ARRAY,
     } kind;
     union {
@@ -541,6 +550,9 @@ struct type {
             autil_sbuf(struct type const* const) parameter_types;
             struct type const* return_type;
         } function;
+        struct {
+            struct type const* base;
+        } pointer;
         struct {
             size_t count;
             struct type const* base;
@@ -559,11 +571,15 @@ struct type*
 type_new_function(
     struct type const* const* parameter_types, struct type const* return_type);
 struct type*
+type_new_pointer(struct type const* base);
+struct type*
 type_new_array(size_t count, struct type const* base);
 
 struct type const*
 type_unique_function(
     struct type const* const* parameter_types, struct type const* return_type);
+struct type const*
+type_unique_pointer(struct type const* base);
 struct type const*
 type_unique_array(size_t count, struct type const* base);
 
@@ -772,6 +788,8 @@ struct tir_expr {
                 UOP_NOT,
                 UOP_POS,
                 UOP_NEG,
+                UOP_DEREFERENCE,
+                UOP_ADDRESSOF,
             } op;
             struct tir_expr const* rhs;
         } unary;
@@ -897,6 +915,7 @@ struct value {
         bool boolean;
         struct autil_bigint* integer;
         struct tir_function const* function;
+        struct address pointer;
         struct {
             autil_sbuf(struct value*) elements;
         } array;
@@ -908,6 +927,8 @@ struct value*
 value_new_integer(struct type const* type, struct autil_bigint* integer);
 struct value*
 value_new_function(struct tir_function const* function);
+struct value*
+value_new_pointer(struct type const* type, struct address address);
 struct value*
 value_new_array(struct type const* type, struct value** elements);
 void

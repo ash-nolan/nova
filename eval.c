@@ -119,6 +119,18 @@ eval_expr(struct evaluator* evaluator, struct tir_expr const* expr)
             autil_bigint_neg(rhs->data.integer, rhs->data.integer);
             return rhs;
         }
+        case UOP_DEREFERENCE: {
+            fatal(
+                expr->location->path,
+                expr->location->line,
+                "dereference operator not-supported in compile-time expressions");
+        }
+        case UOP_ADDRESSOF: {
+            fatal(
+                expr->location->path,
+                expr->location->line,
+                "addressof operator not-supported in compile-time expressions");
+        }
         default:
             UNREACHABLE();
         }

@@ -263,6 +263,8 @@ static void
 codegen_rvalue_binary(struct tir_expr const* expr);
 static void
 codegen_lvalue(struct tir_expr const* expr);
+static void
+codegen_lvalue_unary(struct tir_expr const* expr);
 
 static void
 codegen_global_variables(void)
@@ -1077,23 +1079,41 @@ codegen_rvalue_unary(struct tir_expr const* expr)
     assert(expr->kind == TIR_EXPR_UNARY);
     trace(NO_PATH, NO_LINE, "%s", __func__);
 
-    codegen_rvalue(expr->data.unary.rhs);
     switch (expr->data.unary.op) {
     case UOP_NOT: {
+        codegen_rvalue(expr->data.unary.rhs);
         appendli("pop rax");
         appendli("mov rbx, 0");
         appendli("cmp rax, rbx");
         appendli("setz al");
         appendli("push rax");
+        return;
     }
     case UOP_POS: {
-        /* nothing */
+        codegen_rvalue(expr->data.unary.rhs);
         return;
     }
     case UOP_NEG: {
+        codegen_rvalue(expr->data.unary.rhs);
         appendli("pop rax");
         appendli("neg rax");
         appendli("push rax");
+        return;
+    }
+    case UOP_DEREFERENCE: {
+        assert(expr->data.unary.rhs->type->kind == TYPE_POINTER);
+        codegen_rvalue(expr->data.unary.rhs);
+        appendli("pop rbx");
+        size_t const size = expr->data.unary.rhs->type->size;
+        push(size);
+        for (size_t i = 0; i < size; ++i) {
+            appendli("mov al, [rbx + %#zu]", i);
+            appendli("mov [rsp + %#zx], al", i);
+        }
+        return;
+    }
+    case UOP_ADDRESSOF: {
+        codegen_lvalue(expr->data.unary.rhs);
         return;
     }
     }
@@ -1361,13 +1381,39 @@ codegen_lvalue(struct tir_expr const* expr)
         appendli("push rax");
         return;
     }
+    case TIR_EXPR_UNARY: {
+        codegen_lvalue_unary(expr);
+        return;
+    }
     case TIR_EXPR_BOOLEAN: /* fallthrough */
     case TIR_EXPR_INTEGER: /* fallthrough */
     case TIR_EXPR_ARRAY: /* fallthrough */
     case TIR_EXPR_SYSCALL: /* fallthrough */
     case TIR_EXPR_CALL: /* fallthrough */
-    case TIR_EXPR_UNARY: /* fallthrough */
     case TIR_EXPR_BINARY: {
+        UNREACHABLE();
+    }
+    }
+
+    UNREACHABLE();
+}
+
+static void
+codegen_lvalue_unary(struct tir_expr const* expr)
+{
+    assert(expr != NULL);
+    trace(NO_PATH, NO_LINE, "%s", __func__);
+
+    switch (expr->data.unary.op) {
+    case UOP_DEREFERENCE: {
+        assert(expr->data.unary.rhs->type->kind == TYPE_POINTER);
+        codegen_rvalue(expr->data.unary.rhs);
+        return;
+    }
+    case UOP_NOT: /* fallthrough */
+    case UOP_POS: /* fallthrough */
+    case UOP_NEG: /* fallthrough */
+    case UOP_ADDRESSOF: {
         UNREACHABLE();
     }
     }

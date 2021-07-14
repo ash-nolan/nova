@@ -70,6 +70,24 @@ type_new_function(
 }
 
 struct type*
+type_new_pointer(struct type const* base)
+{
+    assert(base != NULL);
+
+    struct autil_string* const name_string =
+        autil_string_new_fmt("*%s", base->name);
+    char const* const name = autil_sipool_intern(
+        context()->sipool,
+        autil_string_start(name_string),
+        autil_string_count(name_string));
+    autil_string_del(name_string);
+
+    struct type* const self = type_new(name, 8u, TYPE_POINTER);
+    self->data.pointer.base = base;
+    return self;
+}
+
+struct type*
 type_new_array(size_t count, struct type const* base)
 {
     assert(base != NULL);
@@ -95,7 +113,30 @@ struct type const*
 type_unique_function(
     struct type const* const* parameter_types, struct type const* return_type)
 {
+    assert(return_type != NULL);
+
     struct type* const type = type_new_function(parameter_types, return_type);
+    struct symbol const* const existing =
+        symbol_table_lookup(context()->global_symbol_table, type->name);
+    if (existing != NULL) {
+        autil_xalloc(type, AUTIL_XALLOC_FREE);
+        return existing->type;
+    }
+
+    struct symbol* const symbol =
+        symbol_new_type(&context()->builtin.location, type);
+    symbol_table_insert(context()->global_symbol_table, symbol);
+    autil_freezer_register(context()->freezer, type);
+    autil_freezer_register(context()->freezer, symbol);
+    return type;
+}
+
+struct type const*
+type_unique_pointer(struct type const* base)
+{
+    assert(base != NULL);
+
+    struct type* const type = type_new_pointer(base);
     struct symbol const* const existing =
         symbol_table_lookup(context()->global_symbol_table, type->name);
     if (existing != NULL) {
@@ -114,6 +155,8 @@ type_unique_function(
 struct type const*
 type_unique_array(size_t count, struct type const* base)
 {
+    assert(base != NULL);
+
     struct type* const type = type_new_array(count, base);
     struct symbol const* const existing =
         symbol_table_lookup(context()->global_symbol_table, type->name);
@@ -625,12 +668,14 @@ tir_expr_is_lvalue(struct tir_expr const* self)
     case TIR_EXPR_INDEX: {
         return tir_expr_is_lvalue(self->data.index.lhs);
     }
+    case TIR_EXPR_UNARY: {
+        return self->data.unary.op == UOP_DEREFERENCE;
+    }
     case TIR_EXPR_BOOLEAN: /* fallthrough */
     case TIR_EXPR_INTEGER: /* fallthrough */
     case TIR_EXPR_ARRAY: /* fallthrough */
     case TIR_EXPR_SYSCALL: /* fallthrough */
     case TIR_EXPR_CALL: /* fallthrough */
-    case TIR_EXPR_UNARY: /* fallthrough */
     case TIR_EXPR_BINARY: {
         return false;
     }
@@ -730,6 +775,17 @@ value_new_function(struct tir_function const* function)
 }
 
 struct value*
+value_new_pointer(struct type const* type, struct address address)
+{
+    assert(type != NULL);
+    assert(type->kind == TYPE_POINTER);
+
+    struct value* self = value_new(type);
+    self->data.pointer = address;
+    return self;
+}
+
+struct value*
 value_new_array(struct type const* type, struct value** elements)
 {
     assert(type != NULL);
@@ -800,6 +856,9 @@ value_freeze(struct value* self, struct autil_freezer* freezer)
     case TYPE_FUNCTION: {
         return;
     }
+    case TYPE_POINTER: {
+        return;
+    }
     case TYPE_ARRAY: {
         autil_sbuf(struct value*) const elements = self->data.array.elements;
         autil_sbuf_freeze(elements, freezer);
@@ -832,6 +891,9 @@ value_clone(struct value const* self)
     }
     case TYPE_FUNCTION: {
         return value_new_function(self->data.function);
+    }
+    case TYPE_POINTER: {
+        return value_new_pointer(self->type, self->data.pointer);
     }
     case TYPE_ARRAY: {
         autil_sbuf(struct value*) const elements = self->data.array.elements;
@@ -869,6 +931,16 @@ value_eq(struct value const* lhs, struct value const* rhs)
     case TYPE_FUNCTION: {
         return lhs->data.function == rhs->data.function;
     }
+    case TYPE_POINTER: {
+        // Pointer comparisons are tricky and have many edge cases to think
+        // about (dangling pointers, absolute vs stack vs global addressing,
+        // etc.). For now the ordering of pointers is undefined during
+        // compile-time computations. In the future an easy first pass could
+        // include allowing ordering operators on global pointers with the same
+        // base address so that comparisons between pointers to elements in the
+        // same global array would be allowed.
+        UNREACHABLE(); // illegal
+    }
     case TYPE_ARRAY: {
         UNREACHABLE(); // illegal
     }
@@ -901,6 +973,9 @@ value_lt(struct value const* lhs, struct value const* rhs)
         // Functions have no meaningful order in non-equality comparisons.
         return false;
     }
+    case TYPE_POINTER: {
+        UNREACHABLE(); // illegal (see comment in value_eq)
+    }
     case TYPE_ARRAY: {
         UNREACHABLE(); // illegal
     }
@@ -932,6 +1007,9 @@ value_gt(struct value const* lhs, struct value const* rhs)
     case TYPE_FUNCTION: {
         // Functions have no meaningful order in non-equality comparisons.
         return false;
+    }
+    case TYPE_POINTER: {
+        UNREACHABLE(); // illegal (see comment in value_eq)
     }
     case TYPE_ARRAY: {
         UNREACHABLE(); // illegal
@@ -1003,9 +1081,15 @@ value_to_new_bytes(struct value const* self)
         return bytes;
     }
     case TYPE_FUNCTION: {
-        // Functions are an abstract concept with address that is chosen by the
-        // assembler. There is no meaningful representation of a function's
-        // address at compile time.
+        // Functions are an abstract concept with an address that is chosen by
+        // the assembler/linker. There is no meaningful representation of a
+        // function's address at compile time.
+        UNREACHABLE();
+    }
+    case TYPE_POINTER: {
+        // The representation of a non-absolute address is chosen by the
+        // assembler/linker and has no meaningful representation at
+        // compile-time.
         UNREACHABLE();
     }
     case TYPE_ARRAY: {

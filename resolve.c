@@ -90,6 +90,16 @@ resolve_expr_unary_arithmetic(
     enum uop_kind uop,
     struct tir_expr const* rhs);
 static struct tir_expr const*
+resolve_expr_unary_dereference(
+    struct resolver* resolver,
+    struct token const* op,
+    struct tir_expr const* rhs);
+static struct tir_expr const*
+resolve_expr_unary_addressof(
+    struct resolver* resolver,
+    struct token const* op,
+    struct tir_expr const* rhs);
+static struct tir_expr const*
 resolve_expr_binary(struct resolver* resolver, struct ast_expr const* expr);
 static struct tir_expr const*
 resolve_expr_binary_logical(
@@ -1070,6 +1080,12 @@ resolve_expr_unary(struct resolver* resolver, struct ast_expr const* expr)
     case TOKEN_DASH: {
         return resolve_expr_unary_arithmetic(resolver, op, UOP_NEG, rhs);
     }
+    case TOKEN_STAR: {
+        return resolve_expr_unary_dereference(resolver, op, rhs);
+    }
+    case TOKEN_AMPERSAND: {
+        return resolve_expr_unary_addressof(resolver, op, rhs);
+    }
     default: {
         UNREACHABLE();
     }
@@ -1130,6 +1146,57 @@ resolve_expr_unary_arithmetic(
 
     struct tir_expr* const resolved =
         tir_expr_new_unary(&op->location, rhs->type, uop, rhs);
+
+    autil_freezer_register(context()->freezer, resolved);
+    return resolved;
+}
+
+static struct tir_expr const*
+resolve_expr_unary_dereference(
+    struct resolver* resolver,
+    struct token const* op,
+    struct tir_expr const* rhs)
+{
+    assert(resolver != NULL);
+    assert(op != NULL);
+    assert(op->kind == TOKEN_STAR);
+    assert(rhs != NULL);
+    trace(resolver->module->path, NO_LINE, "%s", __func__);
+
+    if (rhs->type->kind != TYPE_POINTER) {
+        fatal(
+            rhs->location->path,
+            rhs->location->line,
+            "cannot dereference non-pointer type `%s`",
+            rhs->type->name);
+    }
+    struct tir_expr* const resolved = tir_expr_new_unary(
+        &op->location, rhs->type->data.pointer.base, UOP_DEREFERENCE, rhs);
+
+    autil_freezer_register(context()->freezer, resolved);
+    return resolved;
+}
+
+static struct tir_expr const*
+resolve_expr_unary_addressof(
+    struct resolver* resolver,
+    struct token const* op,
+    struct tir_expr const* rhs)
+{
+    assert(resolver != NULL);
+    assert(op != NULL);
+    assert(op->kind == TOKEN_AMPERSAND);
+    assert(rhs != NULL);
+    trace(resolver->module->path, NO_LINE, "%s", __func__);
+
+    if (!tir_expr_is_lvalue(rhs)) {
+        fatal(
+            rhs->location->path,
+            rhs->location->line,
+            "cannot take the address of a non-lvalue");
+    }
+    struct tir_expr* const resolved = tir_expr_new_unary(
+        &op->location, type_unique_pointer(rhs->type), UOP_ADDRESSOF, rhs);
 
     autil_freezer_register(context()->freezer, resolved);
     return resolved;
@@ -1375,6 +1442,11 @@ resolve_typespec(struct resolver* resolver, struct ast_typespec const* typespec)
             resolve_typespec(resolver, typespec->data.function.return_typespec);
 
         return type_unique_function(parameter_types, return_type);
+    }
+    case TYPESPEC_POINTER: {
+        struct type const* const base =
+            resolve_typespec(resolver, typespec->data.pointer.base);
+        return type_unique_pointer(base);
     }
     case TYPESPEC_ARRAY: {
         struct tir_expr const* const count_expr =

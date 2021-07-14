@@ -1,0 +1,26 @@
+func main() void {
+    var x: ssize = 0xBADCAFE01DC0FFEEs;
+    var addressof_x: *ssize = &x;
+    var dereference_addressof_x: ssize = *addressof_x;
+
+    dump x;
+    dump *&x;
+    dump *&*&x;
+    dump *&*&*&*&x;
+    dump dereference_addressof_x;
+
+    var y: [2u][3u]ssize = (:[2u][3u]ssize)[
+        (:[3u]ssize)[1s, 3s, 5s],
+        (:[3u]ssize)[2s, 4s, 6s]
+    ];
+    dump y[1u][2u];
+    dump *&y[1u][2u];
+}
+################################################################################
+# EE FF C0 1D E0 AF DC BA
+# EE FF C0 1D E0 AF DC BA
+# EE FF C0 1D E0 AF DC BA
+# EE FF C0 1D E0 AF DC BA
+# EE FF C0 1D E0 AF DC BA
+# 06 00 00 00 00 00 00 00
+# 06 00 00 00 00 00 00 00

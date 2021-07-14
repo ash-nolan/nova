@@ -277,6 +277,10 @@ order_typespec(struct orderer* orderer, struct ast_typespec const* typespec)
         order_typespec(orderer, typespec->data.function.return_typespec);
         return;
     }
+    case TYPESPEC_POINTER: {
+        order_typespec(orderer, typespec->data.pointer.base);
+        return;
+    }
     case TYPESPEC_ARRAY: {
         order_expr(orderer, typespec->data.array.count);
         order_typespec(orderer, typespec->data.array.base);
