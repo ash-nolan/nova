@@ -4,9 +4,9 @@
 # ['48', '65', '6c', '6c', '6f', '2c', '20', '77', '6f', '72', '6c', '64', '21', '0a']
 # >>> len(s)
 # 14
-var hello: [2u]usize = (:[2u]usize)[
-    0x77202C6F6C6C6548u,
-    0x00000A21646C726Fu
+var hello: [14u]u8 = (:[14u]u8)[
+    0x48u8, 0x65u8, 0x6Cu8, 0x6Cu8, 0x6Fu8, 0x2Cu8, 0x20u8, 0x77u8,
+    0x6Fu8, 0x72u8, 0x6Cu8, 0x64u8, 0x21u8, 0x0Au8
 ];
 
 func main() void {
