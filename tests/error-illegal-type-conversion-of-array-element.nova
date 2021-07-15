@@ -1,0 +1,5 @@
+func main() void {
+    dump (:[3u]u8)[1u8, 2s64, 3u8];
+}
+################################################################################
+# [error-illegal-type-conversion-of-array-element.nova:2] error: illegal type conversion from `s64` to `u8`

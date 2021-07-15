@@ -931,7 +931,17 @@ resolve_expr_array(struct resolver* resolver, struct ast_expr const* expr)
         expr->data.array.elements;
     autil_sbuf(struct tir_expr const*) resolved_elements = NULL;
     for (size_t i = 0; i < autil_sbuf_count(elements); ++i) {
-        autil_sbuf_push(resolved_elements, resolve_expr(resolver, elements[i]));
+        struct tir_expr const* const resolved_element =
+            resolve_expr(resolver, elements[i]);
+        if (resolved_element->type != type->data.array.base) {
+            fatal(
+                resolved_element->location->path,
+                resolved_element->location->line,
+                "illegal type conversion from `%s` to `%s`",
+                resolved_element->type->name,
+                type->data.array.base->name);
+        }
+        autil_sbuf_push(resolved_elements, resolved_element);
     }
     autil_sbuf_freeze(resolved_elements, context()->freezer);
 
