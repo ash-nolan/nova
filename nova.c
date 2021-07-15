@@ -295,6 +295,7 @@ context_init(void)
     s_context.interned.return_ = INTERN_STR_LITERAL("return");
     s_context.interned.void_ = INTERN_STR_LITERAL("void");
     s_context.interned.bool_ = INTERN_STR_LITERAL("bool");
+    s_context.interned.byte = INTERN_STR_LITERAL("byte");
     s_context.interned.usize = INTERN_STR_LITERAL("usize");
     s_context.interned.ssize = INTERN_STR_LITERAL("ssize");
     s_context.interned.u = INTERN_STR_LITERAL("u");
@@ -310,30 +311,37 @@ context_init(void)
     };
     struct type* const type_void = type_new_void();
     struct type* const type_bool = type_new_bool();
+    struct type* const type_byte = type_new_byte();
     struct type* const type_usize = type_new_usize();
     struct type* const type_ssize = type_new_ssize();
     autil_freezer_register(context()->freezer, type_void);
     autil_freezer_register(context()->freezer, type_bool);
+    autil_freezer_register(context()->freezer, type_byte);
     autil_freezer_register(context()->freezer, type_usize);
     autil_freezer_register(context()->freezer, type_ssize);
     struct symbol* const symbol_void =
         symbol_new_type(&s_context.builtin.location, type_void);
     struct symbol* const symbol_bool =
         symbol_new_type(&s_context.builtin.location, type_bool);
+    struct symbol* const symbol_byte =
+        symbol_new_type(&s_context.builtin.location, type_byte);
     struct symbol* const symbol_usize =
         symbol_new_type(&s_context.builtin.location, type_usize);
     struct symbol* const symbol_ssize =
         symbol_new_type(&s_context.builtin.location, type_ssize);
     autil_freezer_register(context()->freezer, symbol_void);
     autil_freezer_register(context()->freezer, symbol_bool);
+    autil_freezer_register(context()->freezer, symbol_byte);
     autil_freezer_register(context()->freezer, symbol_usize);
     autil_freezer_register(context()->freezer, symbol_ssize);
     symbol_table_insert(s_context.global_symbol_table, symbol_void);
     symbol_table_insert(s_context.global_symbol_table, symbol_bool);
+    symbol_table_insert(s_context.global_symbol_table, symbol_byte);
     symbol_table_insert(s_context.global_symbol_table, symbol_usize);
     symbol_table_insert(s_context.global_symbol_table, symbol_ssize);
     s_context.builtin.void_ = type_void;
     s_context.builtin.bool_ = type_bool;
+    s_context.builtin.byte = type_byte;
     s_context.builtin.usize = type_usize;
     s_context.builtin.ssize = type_ssize;
 }

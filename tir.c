@@ -32,6 +32,12 @@ type_new_bool(void)
 }
 
 struct type*
+type_new_byte(void)
+{
+    return type_new(context()->interned.byte, 1u, TYPE_BYTE);
+}
+
+struct type*
 type_new_usize(void)
 {
     return type_new(context()->interned.usize, 8u, TYPE_USIZE);
@@ -751,6 +757,15 @@ value_new_boolean(bool boolean)
 }
 
 struct value*
+value_new_byte(uint8_t byte)
+{
+    struct type const* const type = context()->builtin.byte;
+    struct value* self = value_new(type);
+    self->data.byte = byte;
+    return self;
+}
+
+struct value*
 value_new_integer(struct type const* type, struct autil_bigint* integer)
 {
     assert(type != NULL);
@@ -809,6 +824,9 @@ value_del(struct value* self)
     case TYPE_BOOL: {
         break;
     }
+    case TYPE_BYTE: {
+        break;
+    }
     case TYPE_USIZE: /* fallthrough */
     case TYPE_SSIZE: {
         autil_bigint_del(self->data.integer);
@@ -848,6 +866,9 @@ value_freeze(struct value* self, struct autil_freezer* freezer)
     case TYPE_BOOL: {
         return;
     }
+    case TYPE_BYTE: {
+        return;
+    }
     case TYPE_USIZE: /* fallthrough */
     case TYPE_SSIZE: {
         autil_bigint_freeze(self->data.integer, freezer);
@@ -883,6 +904,9 @@ value_clone(struct value const* self)
     }
     case TYPE_BOOL: {
         return value_new_boolean(self->data.boolean);
+    }
+    case TYPE_BYTE: {
+        return value_new_byte(self->data.byte);
     }
     case TYPE_USIZE: /* fallthrough */
     case TYPE_SSIZE: {
@@ -923,6 +947,9 @@ value_eq(struct value const* lhs, struct value const* rhs)
     }
     case TYPE_BOOL: {
         return lhs->data.boolean == rhs->data.boolean;
+    }
+    case TYPE_BYTE: {
+        return lhs->data.byte == rhs->data.byte;
     }
     case TYPE_USIZE: /* fallthrough */
     case TYPE_SSIZE: {
@@ -965,6 +992,9 @@ value_lt(struct value const* lhs, struct value const* rhs)
     case TYPE_BOOL: {
         return lhs->data.boolean < rhs->data.boolean;
     }
+    case TYPE_BYTE: {
+        return lhs->data.byte < rhs->data.byte;
+    }
     case TYPE_USIZE: /* fallthrough */
     case TYPE_SSIZE: {
         return autil_bigint_cmp(lhs->data.integer, rhs->data.integer) < 0;
@@ -999,6 +1029,9 @@ value_gt(struct value const* lhs, struct value const* rhs)
     }
     case TYPE_BOOL: {
         return lhs->data.boolean > rhs->data.boolean;
+    }
+    case TYPE_BYTE: {
+        return lhs->data.byte > rhs->data.byte;
     }
     case TYPE_USIZE: /* fallthrough */
     case TYPE_SSIZE: {
@@ -1037,6 +1070,11 @@ value_to_new_bytes(struct value const* self)
     case TYPE_BOOL: {
         assert(autil_sbuf_count(bytes) == 1);
         bytes[0] = self->data.boolean;
+        return bytes;
+    }
+    case TYPE_BYTE: {
+        assert(autil_sbuf_count(bytes) == 1);
+        bytes[0] = self->data.byte;
         return bytes;
     }
     case TYPE_USIZE: /* fallthrough */

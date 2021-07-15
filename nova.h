@@ -102,6 +102,7 @@ struct context {
         char const* return_; // "return"
         char const* void_;   // "void"
         char const* bool_;   // "bool"
+        char const* byte;    // "byte"
         char const* usize;   // "usize"
         char const* ssize;   // "ssize"
         char const* u;       // "u"
@@ -114,6 +115,7 @@ struct context {
         struct source_location location;
         struct type const* void_;
         struct type const* bool_;
+        struct type const* byte;
         struct type const* usize;
         struct type const* ssize;
     } builtin;
@@ -539,6 +541,7 @@ struct type {
     enum type_kind {
         TYPE_VOID,
         TYPE_BOOL,
+        TYPE_BYTE,
         TYPE_USIZE,
         TYPE_SSIZE,
         TYPE_FUNCTION,
@@ -563,6 +566,8 @@ struct type*
 type_new_void(void);
 struct type*
 type_new_bool(void);
+struct type*
+type_new_byte(void);
 struct type*
 type_new_usize(void);
 struct type*
@@ -913,6 +918,7 @@ struct value {
     struct type const* type;
     struct {
         bool boolean;
+        uint8_t byte;
         struct autil_bigint* integer;
         struct tir_function const* function;
         struct address pointer;
@@ -923,6 +929,8 @@ struct value {
 };
 struct value*
 value_new_boolean(bool boolean);
+struct value*
+value_new_byte(uint8_t byte);
 struct value*
 value_new_integer(struct type const* type, struct autil_bigint* integer);
 struct value*
