@@ -38,6 +38,54 @@ type_new_byte(void)
 }
 
 struct type*
+type_new_u8(void)
+{
+    return type_new(context()->interned.u8, 1u, TYPE_U8);
+}
+
+struct type*
+type_new_s8(void)
+{
+    return type_new(context()->interned.s8, 1u, TYPE_S8);
+}
+
+struct type*
+type_new_u16(void)
+{
+    return type_new(context()->interned.u16, 2u, TYPE_U16);
+}
+
+struct type*
+type_new_s16(void)
+{
+    return type_new(context()->interned.s16, 2u, TYPE_S16);
+}
+
+struct type*
+type_new_u32(void)
+{
+    return type_new(context()->interned.u32, 4u, TYPE_U32);
+}
+
+struct type*
+type_new_s32(void)
+{
+    return type_new(context()->interned.s32, 4u, TYPE_S32);
+}
+
+struct type*
+type_new_u64(void)
+{
+    return type_new(context()->interned.u64, 8u, TYPE_U64);
+}
+
+struct type*
+type_new_s64(void)
+{
+    return type_new(context()->interned.s64, 8u, TYPE_S64);
+}
+
+struct type*
 type_new_usize(void)
 {
     return type_new(context()->interned.usize, 8u, TYPE_USIZE);
@@ -183,7 +231,10 @@ bool
 type_is_integer(struct type const* self)
 {
     enum type_kind const kind = self->kind;
-    return kind == TYPE_USIZE || kind == TYPE_SSIZE;
+    return kind == TYPE_U8 || kind == TYPE_S8 || kind == TYPE_U16
+        || kind == TYPE_S16 || kind == TYPE_U32 || kind == TYPE_S32
+        || kind == TYPE_U64 || kind == TYPE_S64 || kind == TYPE_USIZE
+        || kind == TYPE_SSIZE;
 }
 
 struct address
@@ -869,6 +920,14 @@ value_freeze(struct value* self, struct autil_freezer* freezer)
     case TYPE_BYTE: {
         return;
     }
+    case TYPE_U8: /* fallthrough */
+    case TYPE_S8: /* fallthrough */
+    case TYPE_U16: /* fallthrough */
+    case TYPE_S16: /* fallthrough */
+    case TYPE_U32: /* fallthrough */
+    case TYPE_S32: /* fallthrough */
+    case TYPE_U64: /* fallthrough */
+    case TYPE_S64: /* fallthrough */
     case TYPE_USIZE: /* fallthrough */
     case TYPE_SSIZE: {
         autil_bigint_freeze(self->data.integer, freezer);
@@ -908,6 +967,14 @@ value_clone(struct value const* self)
     case TYPE_BYTE: {
         return value_new_byte(self->data.byte);
     }
+    case TYPE_U8: /* fallthrough */
+    case TYPE_S8: /* fallthrough */
+    case TYPE_U16: /* fallthrough */
+    case TYPE_S16: /* fallthrough */
+    case TYPE_U32: /* fallthrough */
+    case TYPE_S32: /* fallthrough */
+    case TYPE_U64: /* fallthrough */
+    case TYPE_S64: /* fallthrough */
     case TYPE_USIZE: /* fallthrough */
     case TYPE_SSIZE: {
         return value_new_integer(
@@ -951,6 +1018,14 @@ value_eq(struct value const* lhs, struct value const* rhs)
     case TYPE_BYTE: {
         return lhs->data.byte == rhs->data.byte;
     }
+    case TYPE_U8: /* fallthrough */
+    case TYPE_S8: /* fallthrough */
+    case TYPE_U16: /* fallthrough */
+    case TYPE_S16: /* fallthrough */
+    case TYPE_U32: /* fallthrough */
+    case TYPE_S32: /* fallthrough */
+    case TYPE_U64: /* fallthrough */
+    case TYPE_S64: /* fallthrough */
     case TYPE_USIZE: /* fallthrough */
     case TYPE_SSIZE: {
         return autil_bigint_cmp(lhs->data.integer, rhs->data.integer) == 0;
@@ -995,6 +1070,14 @@ value_lt(struct value const* lhs, struct value const* rhs)
     case TYPE_BYTE: {
         return lhs->data.byte < rhs->data.byte;
     }
+    case TYPE_U8: /* fallthrough */
+    case TYPE_S8: /* fallthrough */
+    case TYPE_U16: /* fallthrough */
+    case TYPE_S16: /* fallthrough */
+    case TYPE_U32: /* fallthrough */
+    case TYPE_S32: /* fallthrough */
+    case TYPE_U64: /* fallthrough */
+    case TYPE_S64: /* fallthrough */
     case TYPE_USIZE: /* fallthrough */
     case TYPE_SSIZE: {
         return autil_bigint_cmp(lhs->data.integer, rhs->data.integer) < 0;
@@ -1033,6 +1116,14 @@ value_gt(struct value const* lhs, struct value const* rhs)
     case TYPE_BYTE: {
         return lhs->data.byte > rhs->data.byte;
     }
+    case TYPE_U8: /* fallthrough */
+    case TYPE_S8: /* fallthrough */
+    case TYPE_U16: /* fallthrough */
+    case TYPE_S16: /* fallthrough */
+    case TYPE_U32: /* fallthrough */
+    case TYPE_S32: /* fallthrough */
+    case TYPE_U64: /* fallthrough */
+    case TYPE_S64: /* fallthrough */
     case TYPE_USIZE: /* fallthrough */
     case TYPE_SSIZE: {
         return autil_bigint_cmp(lhs->data.integer, rhs->data.integer) > 0;
@@ -1077,6 +1168,14 @@ value_to_new_bytes(struct value const* self)
         bytes[0] = self->data.byte;
         return bytes;
     }
+    case TYPE_U8: /* fallthrough */
+    case TYPE_S8: /* fallthrough */
+    case TYPE_U16: /* fallthrough */
+    case TYPE_S16: /* fallthrough */
+    case TYPE_U32: /* fallthrough */
+    case TYPE_S32: /* fallthrough */
+    case TYPE_U64: /* fallthrough */
+    case TYPE_S64: /* fallthrough */
     case TYPE_USIZE: /* fallthrough */
     case TYPE_SSIZE: {
         // Convert the magnitude of the bigint into a bit array. If the bigint

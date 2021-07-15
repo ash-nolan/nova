@@ -103,7 +103,17 @@
                    | <integer-oct>
                    | <integer-dec>
                    | <integer-hex>
-<integer-suffix> ::= "u" | "s"
+
+<integer-suffix> ::= "u8"
+                   | "s8"
+                   | "u16"
+                   | "s16"
+                   | "u32"
+                   | "s32"
+                   | "u64"
+                   | "s64"
+                   | "u"
+                   | "s"
 
 <integer-bin> ::= "0b" <digit-bin>+
 <integer-oct> ::= "0o" <digit-oct>+

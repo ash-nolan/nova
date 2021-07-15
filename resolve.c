@@ -856,6 +856,30 @@ integer_literal_suffix_to_type(
             suffix);
     }
 
+    if (suffix == context()->interned.u8) {
+        return context()->builtin.u8;
+    }
+    if (suffix == context()->interned.s8) {
+        return context()->builtin.s8;
+    }
+    if (suffix == context()->interned.u16) {
+        return context()->builtin.u16;
+    }
+    if (suffix == context()->interned.s16) {
+        return context()->builtin.s16;
+    }
+    if (suffix == context()->interned.u32) {
+        return context()->builtin.u32;
+    }
+    if (suffix == context()->interned.s32) {
+        return context()->builtin.s32;
+    }
+    if (suffix == context()->interned.u64) {
+        return context()->builtin.u64;
+    }
+    if (suffix == context()->interned.s64) {
+        return context()->builtin.s64;
+    }
     if (suffix == context()->interned.u) {
         return context()->builtin.usize;
     }

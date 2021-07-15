@@ -102,6 +102,14 @@ struct context {
         char const* return_; // "return"
         char const* void_;   // "void"
         char const* bool_;   // "bool"
+        char const* u8;      // "u8"
+        char const* s8;      // "s8"
+        char const* u16;     // "u16"
+        char const* s16;     // "s16"
+        char const* u32;     // "u32"
+        char const* s32;     // "s32"
+        char const* u64;     // "u64"
+        char const* s64;     // "s64"
         char const* byte;    // "byte"
         char const* usize;   // "usize"
         char const* ssize;   // "ssize"
@@ -116,6 +124,14 @@ struct context {
         struct type const* void_;
         struct type const* bool_;
         struct type const* byte;
+        struct type const* u8;
+        struct type const* s8;
+        struct type const* u16;
+        struct type const* s16;
+        struct type const* u32;
+        struct type const* s32;
+        struct type const* u64;
+        struct type const* s64;
         struct type const* usize;
         struct type const* ssize;
     } builtin;
@@ -542,6 +558,14 @@ struct type {
         TYPE_VOID,
         TYPE_BOOL,
         TYPE_BYTE,
+        TYPE_U8,
+        TYPE_S8,
+        TYPE_U16,
+        TYPE_S16,
+        TYPE_U32,
+        TYPE_S32,
+        TYPE_U64,
+        TYPE_S64,
         TYPE_USIZE,
         TYPE_SSIZE,
         TYPE_FUNCTION,
@@ -568,6 +592,22 @@ struct type*
 type_new_bool(void);
 struct type*
 type_new_byte(void);
+struct type*
+type_new_u8(void);
+struct type*
+type_new_s8(void);
+struct type*
+type_new_u16(void);
+struct type*
+type_new_s16(void);
+struct type*
+type_new_u32(void);
+struct type*
+type_new_s32(void);
+struct type*
+type_new_u64(void);
+struct type*
+type_new_s64(void);
 struct type*
 type_new_usize(void);
 struct type*
