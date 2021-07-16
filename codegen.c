@@ -37,6 +37,19 @@ push_at_address(size_t size, struct address const* address);
 static void
 pop(size_t size);
 
+// Copy size bytes from the address in rax to to the address in rbx using rcx
+// for intermediate storage. Roughly equivalent to memcpy(rbx, rax, size).
+static void
+copy_rax_rbx_via_rcx(size_t size);
+// Copy size bytes from the address in rsp to to the address in rbx using rcx
+// for intermediate storage. Roughly equivalent to memcpy(rbx, rsp, size).
+static void
+copy_rsp_rbx_via_rcx(size_t size);
+// Copy size bytes from the address in rax to to the address in rsp using rcx
+// for intermediate storage. Roughly equivalent to memcpy(rsp, rax, size).
+static void
+copy_rax_rsp_via_rcx(size_t size);
+
 static void
 append(char const* fmt, ...)
 {
@@ -210,6 +223,87 @@ pop(size_t size)
     }
 
     appendli("add rsp, %#zx", ceil8z(size));
+}
+
+static void
+copy_rax_rbx_via_rcx(size_t size)
+{
+    size_t cur = 0u;
+    while ((size - cur) >= 8u) {
+        appendli("mov rcx, [rax + %#zu]", cur);
+        appendli("mov [rbx + %#zx], rcx", cur);
+        cur += 8u;
+    }
+    if ((size - cur) >= 4u) {
+        appendli("mov ecx, [rax + %#zu]", cur);
+        appendli("mov [rbx + %#zx], ecx", cur);
+        cur += 4u;
+        assert((size - cur) < 4u);
+    }
+    if ((size - cur) >= 2u) {
+        appendli("mov cx, [rax + %#zu]", cur);
+        appendli("mov [rbx + %#zx], cx", cur);
+        cur += 2u;
+        assert((size - cur) < 2u);
+    }
+    if ((size - cur) == 1u) {
+        appendli("mov cl, [rax + %#zu]", cur);
+        appendli("mov [rbx + %#zx], cl", cur);
+    }
+}
+
+static void
+copy_rsp_rbx_via_rcx(size_t size)
+{
+    size_t cur = 0u;
+    while ((size - cur) >= 8u) {
+        appendli("mov rcx, [rsp + %#zu]", cur);
+        appendli("mov [rbx + %#zx], rcx", cur);
+        cur += 8u;
+    }
+    if ((size - cur) >= 4u) {
+        appendli("mov ecx, [rsp + %#zu]", cur);
+        appendli("mov [rbx + %#zx], ecx", cur);
+        cur += 4u;
+        assert((size - cur) < 4u);
+    }
+    if ((size - cur) >= 2u) {
+        appendli("mov cx, [rsp + %#zu]", cur);
+        appendli("mov [rbx + %#zx], cx", cur);
+        cur += 2u;
+        assert((size - cur) < 2u);
+    }
+    if ((size - cur) == 1u) {
+        appendli("mov cl, [rsp + %#zu]", cur);
+        appendli("mov [rbx + %#zx], cl", cur);
+    }
+}
+
+static void
+copy_rax_rsp_via_rcx(size_t size)
+{
+    size_t cur = 0u;
+    while ((size - cur) >= 8u) {
+        appendli("mov rcx, [rax + %#zu]", cur);
+        appendli("mov [rsp + %#zx], rcx", cur);
+        cur += 8u;
+    }
+    if ((size - cur) >= 4u) {
+        appendli("mov ecx, [rax + %#zu]", cur);
+        appendli("mov [rsp + %#zx], ecx", cur);
+        cur += 4u;
+        assert((size - cur) < 4u);
+    }
+    if ((size - cur) >= 2u) {
+        appendli("mov cx, [rax + %#zu]", cur);
+        appendli("mov [rsp + %#zx], cx", cur);
+        cur += 2u;
+        assert((size - cur) < 2u);
+    }
+    if ((size - cur) == 1u) {
+        appendli("mov cl, [rax + %#zu]", cur);
+        appendli("mov [rsp + %#zx], cl", cur);
+    }
 }
 
 static void
@@ -711,12 +805,7 @@ codegen_stmt_return(struct tir_stmt const* stmt)
         assert(return_symbol->address->kind == ADDRESS_LOCAL);
         appendli("mov rbx, rbp");
         appendli("add rbx, %d", return_symbol->address->data.local.rbp_offset);
-        // copy
-        for (size_t i = 0; i < return_symbol->type->size; ++i) {
-            appendli("mov cl, [rsp + %#zu]", i);
-            appendli("mov [rbx + %#zx], cl", i);
-        }
-
+        copy_rsp_rbx_via_rcx(return_symbol->type->size);
     }
 
     appendli("; EPILOGUE");
@@ -925,17 +1014,10 @@ codegen_rvalue_array(struct tir_expr const* expr)
         assert(elements[i]->type == element_type);
         codegen_rvalue(elements[i]);
 
-        // TODO: Replace this byte-by-byte memcpy with a cascading memcpy. Or
-        // perhaps we should add some `copy` function that takes a source and a
-        // destination address and does this for us? Maybe use it for assign
-        // stmts as well?
         appendli("mov rbx, rsp");
         appendli("add rbx, %zu", ceil8z(element_size)); // array start
         appendli("add rbx, %zu", element_size * i); // array index
-        for (size_t ii = 0; ii < element_size; ++ii) {
-            appendli("mov al, [rsp + %#zu]", ii);
-            appendli("mov [rbx + %#zx], al", ii);
-        }
+        copy_rsp_rbx_via_rcx(element_size);
 
         pop(element_size);
     }
@@ -1044,10 +1126,7 @@ codegen_rvalue_index(struct tir_expr const* expr)
         appendli("pop rbx"); // start
         appendli("add rax, rbx"); // start + index * sizeof(element_type)
         // copy
-        for (size_t i = 0; i < element_type->size; ++i) {
-            appendli("mov cl, [rax + %#zu]", i);
-            appendli("mov [rsp + %#zx], cl", i);
-        }
+        copy_rax_rsp_via_rcx(element_type->size);
 
         return;
     }
@@ -1065,10 +1144,7 @@ codegen_rvalue_index(struct tir_expr const* expr)
     appendli("mov rbx, %zu", lhs_type->size); // sizeof(array)
     appendli("add rbx, rsp", lhs_type); // start  + sizeof(array)
     // copy
-    for (size_t i = 0; i < element_type->size; ++i) {
-        appendli("mov cl, [rax + %#zu]", i);
-        appendli("mov [rbx + %#zx], cl", i);
-    }
+    copy_rax_rbx_via_rcx(element_type->size);
 
     // Pop array rvalue.
     pop(lhs_type->size);
@@ -1105,13 +1181,10 @@ codegen_rvalue_unary(struct tir_expr const* expr)
     case UOP_DEREFERENCE: {
         assert(expr->data.unary.rhs->type->kind == TYPE_POINTER);
         codegen_rvalue(expr->data.unary.rhs);
-        appendli("pop rbx");
+        appendli("pop rax");
         size_t const size = expr->data.unary.rhs->type->size;
         push(size);
-        for (size_t i = 0; i < size; ++i) {
-            appendli("mov al, [rbx + %#zu]", i);
-            appendli("mov [rsp + %#zx], al", i);
-        }
+        copy_rax_rsp_via_rcx(size);
         return;
     }
     case UOP_ADDRESSOF: {
