@@ -707,11 +707,16 @@ codegen_stmt_return(struct tir_stmt const* stmt)
         // Store in return address.
         struct symbol const* const return_symbol = symbol_table_lookup(
             current_function->symbol_table, context()->interned.return_);
-        appendli("pop rax");
+        // rbx := destination
         assert(return_symbol->address->kind == ADDRESS_LOCAL);
-        char* const addr = address_to_new_cstr(return_symbol->address);
-        appendli("mov [%s], rax", addr);
-        autil_xalloc(addr, AUTIL_XALLOC_FREE);
+        appendli("mov rbx, rbp");
+        appendli("add rbx, %d", return_symbol->address->data.local.rbp_offset);
+        // copy
+        for (size_t i = 0; i < return_symbol->type->size; ++i) {
+            appendli("mov cl, [rsp + %#zu]", i);
+            appendli("mov [rbx + %#zx], cl", i);
+        }
+
     }
 
     appendli("; EPILOGUE");
@@ -987,11 +992,8 @@ codegen_rvalue_call(struct tir_expr const* expr)
     struct type const* function_type = expr->data.call.function->type;
     assert(function_type->kind == TYPE_FUNCTION);
     struct type const* return_type = function_type->data.function.return_type;
-    if (return_type->size != 0) {
-        assert(return_type->size <= 8);
-        appendli("mov rax, 0");
-        appendli("push rax");
-    }
+    push(return_type->size);
+
     // Evaluate & push arguments from left to right.
     struct tir_expr const* const* const arguments = expr->data.call.arguments;
     for (size_t i = 0; i < autil_sbuf_count(arguments); ++i) {
