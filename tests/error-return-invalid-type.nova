@@ -2,4 +2,4 @@ func foo() ssize {
     return 1u;
 }
 ################################################################################
-# [error-return-invalid-type.nova:2] error: illegal type conversion from `usize` to `ssize`
+# [error-return-invalid-type.nova:2] error: illegal implicit type conversion from `usize` to `ssize`

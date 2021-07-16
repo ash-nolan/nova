@@ -1,3 +1,3 @@
 const foo: bool = 123s;
 ################################################################################
-# [error-illegal-type-conversion-in-declaration.nova:1] error: illegal type conversion from `ssize` to `bool`
+# [error-illegal-type-conversion-in-declaration.nova:1] error: illegal implicit type conversion from `ssize` to `bool`

@@ -1,0 +1,59 @@
+const gc0: byte = 0xEFu8;
+const gc1: byte = +0xEFs8;
+const gc2: byte = -0xEFs8;
+const gc3: byte = gc0;
+
+var gv0: byte = 0xEFu8;
+var gv1: byte = +0xEFs8;
+var gv2: byte = -0xEFs8;
+var gv3: byte = gv0;
+
+
+func main() void {
+    dump gc0;
+    dump gc1;
+    dump gc2;
+    dump gc3;
+
+    dump gv0;
+    dump gv1;
+    dump gv2;
+    dump gv3;
+
+    const lc0: byte = 0xEFu8;
+    const lc1: byte = +0xEFs8;
+    const lc2: byte = -0xEFs8;
+    const lc3: byte = gc0;
+
+    var lv0: byte = 0xEFu8;
+    var lv1: byte = +0xEFs8;
+    var lv2: byte = -0xEFs8;
+    var lv3: byte = gv0;
+
+    dump lc0;
+    dump lc1;
+    dump lc2;
+    dump lc3;
+
+    dump lv0;
+    dump lv1;
+    dump lv2;
+    dump lv3;
+}
+################################################################################
+# EF
+# EF
+# 11
+# EF
+# EF
+# EF
+# 11
+# EF
+# EF
+# EF
+# 11
+# EF
+# EF
+# EF
+# 11
+# EF

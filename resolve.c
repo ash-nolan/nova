@@ -27,6 +27,14 @@ static struct address
 resolver_reserve_space(
     struct resolver* self, char const* name, struct type const* type);
 
+static bool
+is_valid_implicit_cast(struct type const* from, struct type const* to);
+static void
+check_implicit_cast(
+    struct source_location const* location,
+    struct type const* from,
+    struct type const* to);
+
 static struct symbol const*
 resolve_decl(struct resolver* resolver, struct ast_decl const* decl);
 static struct symbol const*
@@ -183,6 +191,52 @@ resolver_reserve_space(
     return address_init_local(self->current_rbp_offset);
 }
 
+static bool
+is_valid_implicit_cast(struct type const* from, struct type const* to)
+{
+    switch (to->kind) {
+    case TYPE_BYTE: {
+        return from->kind == TYPE_BYTE || from->kind == TYPE_U8
+            || from->kind == TYPE_S8;
+    }
+    case TYPE_VOID: /* fallthrough */
+    case TYPE_BOOL: /* fallthrough */
+    case TYPE_U8: /* fallthrough */
+    case TYPE_S8: /* fallthrough */
+    case TYPE_U16: /* fallthrough */
+    case TYPE_S16: /* fallthrough */
+    case TYPE_U32: /* fallthrough */
+    case TYPE_S32: /* fallthrough */
+    case TYPE_U64: /* fallthrough */
+    case TYPE_S64: /* fallthrough */
+    case TYPE_USIZE: /* fallthrough */
+    case TYPE_SSIZE: /* fallthrough */
+    case TYPE_FUNCTION: /* fallthrough */
+    case TYPE_POINTER: /* fallthrough */
+    case TYPE_ARRAY: {
+        return from == to;
+    }
+    }
+
+    UNREACHABLE();
+}
+
+static void
+check_implicit_cast(
+    struct source_location const* location,
+    struct type const* from,
+    struct type const* to)
+{
+    if (!is_valid_implicit_cast(from, to)) {
+        fatal(
+            location->path,
+            location->line,
+            "illegal implicit type conversion from `%s` to `%s`",
+            from->name,
+            to->name);
+    }
+}
+
 static struct symbol const*
 resolve_decl(struct resolver* resolver, struct ast_decl const* decl)
 {
@@ -234,14 +288,7 @@ resolve_decl_variable(
 
     struct type const* const type =
         resolve_typespec(resolver, decl->data.variable.typespec);
-    if (expr->type != type) {
-        fatal(
-            decl->location->path,
-            decl->location->line,
-            "illegal type conversion from `%s` to `%s`",
-            expr->type->name,
-            type->name);
-    }
+    check_implicit_cast(expr->location, expr->type, type);
 
     struct address* const address =
         address_new(resolver_reserve_space(resolver, decl->name, type));
@@ -285,14 +332,7 @@ resolve_decl_constant(struct resolver* resolver, struct ast_decl const* decl)
 
     struct type const* const type =
         resolve_typespec(resolver, decl->data.constant.typespec);
-    if (expr->type != type) {
-        fatal(
-            decl->location->path,
-            decl->location->line,
-            "illegal type conversion from `%s` to `%s`",
-            expr->type->name,
-            type->name);
-    }
+    check_implicit_cast(expr->location, expr->type, type);
 
     struct address* const address =
         address_new(resolver_reserve_space(resolver, decl->name, type));
@@ -680,14 +720,7 @@ resolve_stmt_return(struct resolver* resolver, struct ast_stmt const* stmt)
     struct tir_expr const* expr = NULL;
     if (stmt->data.return_.expr != NULL) {
         expr = resolve_expr(resolver, stmt->data.return_.expr);
-        if (expr->type != return_type) {
-            fatal(
-                expr->location->path,
-                expr->location->line,
-                "illegal type conversion from `%s` to `%s`",
-                expr->type->name,
-                return_type->name);
-        }
+        check_implicit_cast(expr->location, expr->type, return_type);
     }
     else {
         if (context()->builtin.void_ != return_type) {
@@ -933,14 +966,10 @@ resolve_expr_array(struct resolver* resolver, struct ast_expr const* expr)
     for (size_t i = 0; i < autil_sbuf_count(elements); ++i) {
         struct tir_expr const* const resolved_element =
             resolve_expr(resolver, elements[i]);
-        if (resolved_element->type != type->data.array.base) {
-            fatal(
-                resolved_element->location->path,
-                resolved_element->location->line,
-                "illegal type conversion from `%s` to `%s`",
-                resolved_element->type->name,
-                type->data.array.base->name);
-        }
+        check_implicit_cast(
+            resolved_element->location,
+            resolved_element->type,
+            type->data.array.base);
         autil_sbuf_push(resolved_elements, resolved_element);
     }
     autil_sbuf_freeze(resolved_elements, context()->freezer);
