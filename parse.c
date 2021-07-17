@@ -513,7 +513,8 @@ token_kind_precedence(enum token_kind kind)
         return PRECEDENCE_COMPARE;
     case TOKEN_PLUS: /* fallthrough */
     case TOKEN_DASH: /* fallthrough */
-    case TOKEN_PIPE:
+    case TOKEN_PIPE: /* fallthrough */
+    case TOKEN_CARET:
         return PRECEDENCE_SUM;
     case TOKEN_STAR: /* fallthrough */
     case TOKEN_FSLASH: /* fallthrough */
@@ -587,6 +588,7 @@ token_kind_led(enum token_kind kind)
     case TOKEN_STAR: /* fallthrough */
     case TOKEN_FSLASH: /* fallthrough */
     case TOKEN_PIPE: /* fallthrough */
+    case TOKEN_CARET: /* fallthrough */
     case TOKEN_AMPERSAND:
         return parse_expr_led_binary;
     default:

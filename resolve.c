@@ -1325,6 +1325,9 @@ resolve_expr_binary(struct resolver* resolver, struct ast_expr const* expr)
     case TOKEN_PIPE: {
         return resolve_expr_binary_bitwise(resolver, op, BOP_BITOR, lhs, rhs);
     }
+    case TOKEN_CARET: {
+        return resolve_expr_binary_bitwise(resolver, op, BOP_BITXOR, lhs, rhs);
+    }
     case TOKEN_AMPERSAND: {
         return resolve_expr_binary_bitwise(resolver, op, BOP_BITAND, lhs, rhs);
     }

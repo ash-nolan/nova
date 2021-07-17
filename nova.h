@@ -198,6 +198,7 @@ enum token_kind {
     TOKEN_STAR, // *
     TOKEN_FSLASH, // /
     TOKEN_PIPE, // |
+    TOKEN_CARET, // ^
     TOKEN_AMPERSAND, // &
     TOKEN_LPAREN, // (
     TOKEN_RPAREN, // )
@@ -872,6 +873,7 @@ struct tir_expr {
                 BOP_MUL,
                 BOP_DIV,
                 BOP_BITOR,
+                BOP_BITXOR,
                 BOP_BITAND,
             } op;
             struct tir_expr const* lhs;

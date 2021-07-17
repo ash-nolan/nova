@@ -1438,6 +1438,17 @@ codegen_rvalue_binary(struct tir_expr const* expr)
         appendli("push rax");
         return;
     }
+    case BOP_BITXOR: {
+        assert(expr->data.binary.lhs->type->size <= 8u);
+        assert(expr->data.binary.rhs->type->size <= 8u);
+        codegen_rvalue(expr->data.binary.lhs);
+        codegen_rvalue(expr->data.binary.rhs);
+        appendli("pop rbx");
+        appendli("pop rax");
+        appendli("xor rax, rbx");
+        appendli("push rax");
+        return;
+    }
     case BOP_BITAND: {
         assert(expr->data.binary.lhs->type->size <= 8u);
         assert(expr->data.binary.rhs->type->size <= 8u);
