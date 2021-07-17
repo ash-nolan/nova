@@ -130,6 +130,13 @@ resolve_expr_binary_arithmetic(
     enum bop_kind bop,
     struct tir_expr const* lhs,
     struct tir_expr const* rhs);
+static struct tir_expr const*
+resolve_expr_binary_bitwise(
+    struct resolver* resolver,
+    struct token const* op,
+    enum bop_kind bop,
+    struct tir_expr const* lhs,
+    struct tir_expr const* rhs);
 
 static struct tir_block const*
 resolve_block(
@@ -1315,6 +1322,9 @@ resolve_expr_binary(struct resolver* resolver, struct ast_expr const* expr)
     case TOKEN_FSLASH: {
         return resolve_expr_binary_arithmetic(resolver, op, BOP_DIV, lhs, rhs);
     }
+    case TOKEN_AMPERSAND: {
+        return resolve_expr_binary_bitwise(resolver, op, BOP_BITAND, lhs, rhs);
+    }
     default: {
         UNREACHABLE();
     }
@@ -1338,8 +1348,8 @@ resolve_expr_binary_logical(
     assert(rhs != NULL);
     trace(resolver->module->path, NO_LINE, "%s", __func__);
 
-    bool const valid = lhs->type->kind == TYPE_BOOL
-        && rhs->type->kind == TYPE_BOOL && lhs->type == rhs->type;
+    bool const valid = lhs->type == rhs->type && lhs->type->kind == TYPE_BOOL
+        && rhs->type->kind == TYPE_BOOL;
     if (!valid) {
         fatal(
             op->location.path,
@@ -1405,8 +1415,8 @@ resolve_expr_binary_arithmetic(
     assert(rhs != NULL);
     trace(resolver->module->path, NO_LINE, "%s", __func__);
 
-    bool const valid = type_is_integer(lhs->type) && type_is_integer(rhs->type)
-        && lhs->type == rhs->type;
+    bool const valid = lhs->type == rhs->type && type_is_integer(lhs->type)
+        && type_is_integer(rhs->type);
     if (!valid) {
         fatal(
             op->location.path,
@@ -1423,6 +1433,47 @@ resolve_expr_binary_arithmetic(
 
     autil_freezer_register(context()->freezer, resolved);
     return resolved;
+}
+
+static struct tir_expr const*
+resolve_expr_binary_bitwise(
+    struct resolver* resolver,
+    struct token const* op,
+    enum bop_kind bop,
+    struct tir_expr const* lhs,
+    struct tir_expr const* rhs)
+{
+    assert(resolver != NULL);
+    assert(op != NULL);
+    assert(lhs != NULL);
+    assert(rhs != NULL);
+    trace(resolver->module->path, NO_LINE, "%s", __func__);
+
+    if (lhs->type != rhs->type) {
+        goto invalid_operand_types;
+    }
+    struct type const* type = lhs->type; // Arbitrarily use lhs.
+
+    bool const valid = type->kind == TYPE_BOOL || type->kind == TYPE_BYTE
+        || type_is_integer(type);
+    if (!valid) {
+        goto invalid_operand_types;
+    }
+
+    struct tir_expr* const resolved =
+        tir_expr_new_binary(&op->location, type, bop, lhs, rhs);
+
+    autil_freezer_register(context()->freezer, resolved);
+    return resolved;
+
+invalid_operand_types:
+    fatal(
+        op->location.path,
+        op->location.line,
+        "invalid arguments of types `%s` and `%s` in binary `%s` expression",
+        lhs->type->name,
+        rhs->type->name,
+        token_kind_to_cstr(op->kind));
 }
 
 static struct tir_block const*

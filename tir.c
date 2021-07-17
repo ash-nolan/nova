@@ -237,6 +237,22 @@ type_is_integer(struct type const* self)
         || kind == TYPE_SSIZE;
 }
 
+bool
+type_is_uinteger(struct type const* self)
+{
+    enum type_kind const kind = self->kind;
+    return kind == TYPE_U8 || kind == TYPE_U16 || kind == TYPE_U32
+        || kind == TYPE_U64 || kind == TYPE_USIZE;
+}
+
+bool
+type_is_sinteger(struct type const* self)
+{
+    enum type_kind const kind = self->kind;
+    return kind == TYPE_S8 || kind == TYPE_S16 || kind == TYPE_S32
+        || kind == TYPE_S64 || kind == TYPE_SSIZE;
+}
+
 struct address
 address_init_global(char const* name)
 {
@@ -878,6 +894,14 @@ value_del(struct value* self)
     case TYPE_BYTE: {
         break;
     }
+    case TYPE_U8: /* fallthrough */
+    case TYPE_S8: /* fallthrough */
+    case TYPE_U16: /* fallthrough */
+    case TYPE_S16: /* fallthrough */
+    case TYPE_U32: /* fallthrough */
+    case TYPE_S32: /* fallthrough */
+    case TYPE_U64: /* fallthrough */
+    case TYPE_S64: /* fallthrough */
     case TYPE_USIZE: /* fallthrough */
     case TYPE_SSIZE: {
         autil_bigint_del(self->data.integer);
@@ -1145,27 +1169,27 @@ value_gt(struct value const* lhs, struct value const* rhs)
 }
 
 uint8_t*
-value_to_new_bytes(struct value const* self)
+value_to_new_bytes(struct value const* value)
 {
-    assert(self != NULL);
+    assert(value != NULL);
 
     autil_sbuf(uint8_t) bytes = NULL;
-    autil_sbuf_resize(bytes, self->type->size);
-    autil_memset(bytes, 0x00, self->type->size);
+    autil_sbuf_resize(bytes, value->type->size);
+    autil_memset(bytes, 0x00, value->type->size);
 
-    switch (self->type->kind) {
+    switch (value->type->kind) {
     case TYPE_VOID: {
         assert(autil_sbuf_count(bytes) == 0);
         return bytes;
     }
     case TYPE_BOOL: {
         assert(autil_sbuf_count(bytes) == 1);
-        bytes[0] = self->data.boolean;
+        bytes[0] = value->data.boolean;
         return bytes;
     }
     case TYPE_BYTE: {
         assert(autil_sbuf_count(bytes) == 1);
-        bytes[0] = self->data.byte;
+        bytes[0] = value->data.byte;
         return bytes;
     }
     case TYPE_U8: /* fallthrough */
@@ -1178,33 +1202,12 @@ value_to_new_bytes(struct value const* self)
     case TYPE_S64: /* fallthrough */
     case TYPE_USIZE: /* fallthrough */
     case TYPE_SSIZE: {
-        // Convert the magnitude of the bigint into a bit array. If the bigint
-        // is negative then we adjust the bit array below using two's complement
-        // arithmetic.
-        size_t const bit_count = self->type->size * 8u;
+        // Convert the bigint into a bit array.
+        size_t const bit_count = value->type->size * 8u;
         struct autil_bitarr* const bits = autil_bitarr_new(bit_count);
-        for (size_t i = 0; i < bit_count; ++i) {
-            int const magnitude_bit =
-                autil_bigint_magnitude_bit_get(self->data.integer, i);
-            autil_bitarr_set(bits, i, magnitude_bit);
-        }
-
-        // Two's complement signed and unsigned integers can be safely
-        // round-tripped via bit-casts, so for convenience we convert negative
-        // big integers into their equivalent two's complement unsigned
-        // (magnitude) representation.
-        if (autil_bigint_cmp(self->data.integer, AUTIL_BIGINT_ZERO) < 0) {
-            // Two's complement positive<->negative conversion:
-            // Invert the bits...
-            autil_bitarr_compl(bits, bits);
-            // ...and add one.
-            int carry = 1;
-            for (size_t i = 0; i < bit_count; ++i) {
-                int const new_digit = (carry + autil_bitarr_get(bits, i)) % 2;
-                int const new_carry = (carry + autil_bitarr_get(bits, i)) >= 2;
-                autil_bitarr_set(bits, i, new_digit);
-                carry = new_carry;
-            }
+        if (bigint_to_bitarr(bits, value->data.integer)) {
+            // Internal compiler error. Integer is out of range.
+            UNREACHABLE();
         }
 
         // Convert the bit array into a byte array via bit shifting and masking.
@@ -1230,8 +1233,8 @@ value_to_new_bytes(struct value const* self)
         UNREACHABLE();
     }
     case TYPE_ARRAY: {
-        autil_sbuf(struct value*) const elements = self->data.array.elements;
-        size_t const element_size = self->type->data.array.base->size;
+        autil_sbuf(struct value*) const elements = value->data.array.elements;
+        size_t const element_size = value->type->data.array.base->size;
         size_t offset = 0;
         for (size_t i = 0; i < autil_sbuf_count(elements); ++i) {
             autil_sbuf(uint8_t) const element_bytes =

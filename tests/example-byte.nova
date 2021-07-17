@@ -1,13 +1,12 @@
 const gc0: byte = 0xEFu8;
-const gc1: byte = +0xEFs8;
-const gc2: byte = -0xEFs8;
+const gc1: byte = +0x7Fs8;
+const gc2: byte = -0x7Fs8;
 const gc3: byte = gc0;
 
 var gv0: byte = 0xEFu8;
-var gv1: byte = +0xEFs8;
-var gv2: byte = -0xEFs8;
+var gv1: byte = +0x7Fs8;
+var gv2: byte = -0x7Fs8;
 var gv3: byte = gv0;
-
 
 func main() void {
     dump gc0;
@@ -21,13 +20,13 @@ func main() void {
     dump gv3;
 
     const lc0: byte = 0xEFu8;
-    const lc1: byte = +0xEFs8;
-    const lc2: byte = -0xEFs8;
+    const lc1: byte = +0x7Fs8;
+    const lc2: byte = -0x7Fs8;
     const lc3: byte = gc0;
 
     var lv0: byte = 0xEFu8;
-    var lv1: byte = +0xEFs8;
-    var lv2: byte = -0xEFs8;
+    var lv1: byte = +0x7Fs8;
+    var lv2: byte = -0x7Fs8;
     var lv3: byte = gv0;
 
     dump lc0;
@@ -42,18 +41,18 @@ func main() void {
 }
 ################################################################################
 # EF
-# EF
-# 11
-# EF
-# EF
-# EF
-# 11
+# 7F
+# 81
 # EF
 # EF
+# 7F
+# 81
 # EF
-# 11
+# EF
+# 7F
+# 81
 # EF
 # EF
-# EF
-# 11
+# 7F
+# 81
 # EF

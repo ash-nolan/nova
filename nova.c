@@ -222,6 +222,88 @@ bigint_to_uz(size_t* res, struct autil_bigint const* bigint)
     return 0;
 }
 
+static void
+bitarr_twos_complement_neg(struct autil_bitarr* bitarr)
+{
+    assert(bitarr != NULL);
+
+    // Invert the bits...
+    autil_bitarr_compl(bitarr, bitarr);
+
+    // ...and add one.
+    int carry = 1;
+    size_t const bit_count = autil_bitarr_count(bitarr);
+    for (size_t i = 0; i < bit_count; ++i) {
+        int const new_digit = (carry + autil_bitarr_get(bitarr, i)) % 2;
+        int const new_carry = (carry + autil_bitarr_get(bitarr, i)) >= 2;
+        autil_bitarr_set(bitarr, i, new_digit);
+        carry = new_carry;
+    }
+}
+
+int
+bigint_to_bitarr(struct autil_bitarr* res, struct autil_bigint const* bigint)
+{
+    assert(res != NULL);
+    assert(bigint != NULL);
+
+    size_t const mag_bit_count = autil_bigint_magnitude_bit_count(bigint);
+    size_t const res_bit_count = autil_bitarr_count(res);
+    if (mag_bit_count > res_bit_count) {
+        return -1;
+    }
+
+    // Write the magnitude to the bigint into the bit array. If the bigint is
+    // negative then we adjust the bit array below using two's complement
+    // arithmetic.
+    for (size_t i = 0; i < res_bit_count; ++i) {
+        int const bit = autil_bigint_magnitude_bit_get(bigint, i);
+        autil_bitarr_set(res, i, bit);
+    }
+
+    // Convert two's complement unsigned (magnitude) representation into
+    // negative signed representation if necessary.
+    if (autil_bigint_cmp(bigint, AUTIL_BIGINT_ZERO) < 0) {
+        // Two's complement positive<->negative conversion:
+        bitarr_twos_complement_neg(res);
+    }
+
+    return 0;
+}
+
+void
+bitarr_to_bigint(
+    struct autil_bigint* res, struct autil_bitarr const* bitarr, bool is_signed)
+{
+    assert(res != NULL);
+    assert(bitarr != NULL);
+
+    size_t const bit_count = autil_bitarr_count(bitarr);
+    struct autil_bitarr* const mag_bits = autil_bitarr_new(bit_count);
+    for (size_t i = 0; i < bit_count; ++i) {
+        int const bit = autil_bitarr_get(bitarr, i);
+        autil_bitarr_set(mag_bits, i, bit);
+    }
+
+    bool const is_neg = is_signed && autil_bitarr_get(bitarr, bit_count - 1u);
+    if (is_neg) {
+        // Two's complement negative<->positive conversion:
+        bitarr_twos_complement_neg(mag_bits);
+    }
+
+    autil_bigint_assign(res, AUTIL_BIGINT_ZERO);
+    for (size_t i = 0; i < bit_count; ++i) {
+        int const bit = autil_bitarr_get(mag_bits, i);
+        autil_bigint_magnitude_bit_set(res, i, bit);
+    }
+
+    if (is_neg) {
+        autil_bigint_neg(res, res);
+    }
+
+    autil_bitarr_del(mag_bits);
+}
+
 void
 xspawnvpw(char const* path, char const* const* argv)
 {

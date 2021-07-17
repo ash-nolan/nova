@@ -208,6 +208,55 @@ eval_expr(struct evaluator* evaluator, struct tir_expr const* expr)
             res = value_new_integer(expr->type, r);
             break;
         }
+        case BOP_BITAND: {
+            assert(
+                lhs->type->kind == TYPE_BOOL || lhs->type->kind == TYPE_BYTE
+                || type_is_integer(lhs->type));
+            assert(
+                rhs->type->kind == TYPE_BOOL || rhs->type->kind == TYPE_BYTE
+                || type_is_integer(rhs->type));
+            assert(lhs->type->kind == rhs->type->kind);
+            struct type const* const type = lhs->type;
+
+            if (type->kind == TYPE_BOOL) {
+                res = value_new_boolean(lhs->data.boolean && rhs->data.boolean);
+                break;
+            }
+
+            if (type->kind == TYPE_BYTE) {
+                res = value_new_byte(lhs->data.byte & rhs->data.byte);
+                break;
+            }
+
+            assert(type_is_integer(type));
+            bool is_signed = type_is_sinteger(type);
+            size_t bit_count = type->size * 8u;
+            struct autil_bitarr* const lhs_bits = autil_bitarr_new(bit_count);
+            struct autil_bitarr* const rhs_bits = autil_bitarr_new(bit_count);
+            struct autil_bitarr* const res_bits = autil_bitarr_new(bit_count);
+            if (bigint_to_bitarr(lhs_bits, lhs->data.integer)) {
+                UNREACHABLE();
+            }
+            if (bigint_to_bitarr(rhs_bits, rhs->data.integer)) {
+                UNREACHABLE();
+            }
+
+            for (size_t i = 0; i < bit_count; ++i) {
+                int const bit = autil_bitarr_get(lhs_bits, i)
+                    && autil_bitarr_get(rhs_bits, i);
+                autil_bitarr_set(res_bits, i, bit);
+            }
+            autil_bitarr_del(lhs_bits);
+            autil_bitarr_del(rhs_bits);
+
+            struct autil_bigint* const res_bigint =
+                autil_bigint_new(AUTIL_BIGINT_ZERO);
+            bitarr_to_bigint(res_bigint, res_bits, is_signed);
+            autil_bitarr_del(res_bits);
+
+            res = value_new_integer(type, res_bigint);
+            break;
+        }
         default:
             UNREACHABLE();
         }

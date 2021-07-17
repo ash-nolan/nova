@@ -53,14 +53,14 @@ func main() void {
     dump arr10;
     dump arr11;
 
-    const arr12: [1u][1u][1u]ssize = (:[1u][1u][1u]ssize)[
-        (:[1u][1u]ssize)[
-            (:[1u]ssize)[0xFFFFFFFFFFFFFFFFs]
+    const arr12: [1u][1u][1u]usize = (:[1u][1u][1u]usize)[
+        (:[1u][1u]usize)[
+            (:[1u]usize)[0xFFFFFFFFFFFFFFFFu]
         ]
     ];
-    var arr13: [1u][1u][1u]ssize = (:[1u][1u][1u]ssize)[
-        (:[1u][1u]ssize)[
-            (:[1u]ssize)[0xFFFFFFFFFFFFFFFFs]
+    var arr13: [1u][1u][1u]usize = (:[1u][1u][1u]usize)[
+        (:[1u][1u]usize)[
+            (:[1u]usize)[0xFFFFFFFFFFFFFFFFu]
         ]
     ];
     dump arr12;

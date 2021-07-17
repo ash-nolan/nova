@@ -49,9 +49,23 @@ ceil8z(size_t x);
 
 // Convert a bigint to size_t.
 // Returns zero on success.
-// Returns non-zero if the provided bigint is out-of-range.
+// Returns non-zero if the provided bigint is out-of-range, in which case *res
+// is left unmodified.
 int
 bigint_to_uz(size_t* res, struct autil_bigint const* bigint);
+// Convert a bigint into a two's complement bit array.
+// Returns zero on success.
+// Returns non-zero if the provided bigint is out-of-range would require more
+// than autil_bitarr_count(res) bits to express, in which res is left
+// unmodified.
+int
+bigint_to_bitarr(struct autil_bitarr* res, struct autil_bigint const* bigint);
+// Convert a two's complement bit array into a bigint.
+void
+bitarr_to_bigint(
+    struct autil_bigint* res,
+    struct autil_bitarr const* bitarr,
+    bool is_signed);
 
 // Spawn a subprocess and wait for it to complete.
 // Returns the exit status of the spawned process.
@@ -630,6 +644,10 @@ type_unique_array(size_t count, struct type const* base);
 
 bool
 type_is_integer(struct type const* self);
+bool
+type_is_uinteger(struct type const* self);
+bool
+type_is_sinteger(struct type const* self);
 
 struct address {
     enum address_kind {
@@ -852,6 +870,7 @@ struct tir_expr {
                 BOP_SUB,
                 BOP_MUL,
                 BOP_DIV,
+                BOP_BITAND,
             } op;
             struct tir_expr const* lhs;
             struct tir_expr const* rhs;
@@ -994,7 +1013,7 @@ bool
 value_gt(struct value const* lhs, struct value const* rhs);
 
 uint8_t* // sbuf
-value_to_new_bytes(struct value const* self);
+value_to_new_bytes(struct value const* value);
 
 ////////////////////////////////////////////////////////////////////////////////
 //////// resolve.c /////////////////////////////////////////////////////////////

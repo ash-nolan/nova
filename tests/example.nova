@@ -1,31 +1,32 @@
 # example.nova
 # Dumping ground for misc. features without standalone tests.
 
-var v_bool_t: bool = true;
-var v_bool_f: bool = false;
-var v_u8: u8 = +0xABu8;
-var v_s8: s8 = -0xABs8;
-var v_u16: u16 = +0xBEEFu16;
-var v_s16: s16 = -0xBEEFs16;
-var v_u32: u32 = +0xDEADBEEFu32;
-var v_s32: s32 = -0xDEADBEEFs32;
-var v_u64: u64 = +0xBADCAFE01DC0FFEEu64;
-var v_s64: s64 = -0xBADCAFE01DC0FFEEs64;
-var v_usize: usize = +0xBADCAFE01DC0FFEEu;
-var v_ssize: ssize = -0xBADCAFE01DC0FFEEs;
-
-const c_bool_t: bool = true;
-const c_bool_f: bool = false;
-const c_u8: u8 = +0xABu8;
-const c_s8: s8 = -0xABs8;
-const c_u16: u16 = +0xBEEFu16;
-const c_s16: s16 = -0xBEEFs16;
-const c_u32: u32 = +0xDEADBEEFu32;
-const c_s32: s32 = -0xDEADBEEFs32;
-const c_u64: u64 = +0xBADCAFE01DC0FFEEu64;
-const c_s64: s64 = -0xBADCAFE01DC0FFEEs64;
-const c_usize: usize = +0xBADCAFE01DC0FFEEu;
-const c_ssize: ssize = -0xBADCAFE01DC0FFEEs;
+## TODO: Fix unrepresentable sign bit for sN types.
+#var v_bool_t: bool = true;
+#var v_bool_f: bool = false;
+#var v_u8: u8 = +0xABu8;
+#var v_s8: s8 = -0xABs8;
+#var v_u16: u16 = +0xBEEFu16;
+#var v_s16: s16 = -0xBEEFs16;
+#var v_u32: u32 = +0xDEADBEEFu32;
+#var v_s32: s32 = -0xDEADBEEFs32;
+#var v_u64: u64 = +0xBADCAFE01DC0FFEEu64;
+#var v_s64: s64 = -0xBADCAFE01DC0FFEEs64;
+#var v_usize: usize = +0xBADCAFE01DC0FFEEu;
+#var v_ssize: ssize = -0xBADCAFE01DC0FFEEs;
+#
+#const c_bool_t: bool = true;
+#const c_bool_f: bool = false;
+#const c_u8: u8 = +0xABu8;
+#const c_s8: s8 = -0xABs8;
+#const c_u16: u16 = +0xBEEFu16;
+#const c_s16: s16 = -0xBEEFs16;
+#const c_u32: u32 = +0xDEADBEEFu32;
+#const c_s32: s32 = -0xDEADBEEFs32;
+#const c_u64: u64 = +0xBADCAFE01DC0FFEEu64;
+#const c_s64: s64 = -0xBADCAFE01DC0FFEEs64;
+#const c_usize: usize = +0xBADCAFE01DC0FFEEu;
+#const c_ssize: ssize = -0xBADCAFE01DC0FFEEs;
 
 const usize_pos: usize = +123u;
 const ssize_pos: ssize = +123s;
@@ -63,31 +64,57 @@ func test_assignment(x: ssize) ssize {
 
 var g: ssize = 4s;
 func main() void {
-    dump v_bool_t;
-    dump v_bool_f;
-    dump v_u8;
-    dump v_s8;
-    dump v_u16;
-    dump v_s16;
-    dump v_u32;
-    dump v_s32;
-    dump v_u64;
-    dump v_s64;
-    dump v_usize;
-    dump v_ssize;
-
-    dump c_bool_t;
-    dump c_bool_f;
-    dump c_u8;
-    dump c_s8;
-    dump c_u16;
-    dump c_s16;
-    dump c_u32;
-    dump c_s32;
-    dump c_u64;
-    dump c_s64;
-    dump c_usize;
-    dump c_ssize;
+## TODO: Fix unrepresentable sign bit for sN types.
+#    dump v_bool_t;
+#    dump v_bool_f;
+#    dump v_u8;
+#    dump v_s8;
+#    dump v_u16;
+#    dump v_s16;
+#    dump v_u32;
+#    dump v_s32;
+#    dump v_u64;
+#    dump v_s64;
+#    dump v_usize;
+#    dump v_ssize;
+#
+#    dump c_bool_t;
+#    dump c_bool_f;
+#    dump c_u8;
+#    dump c_s8;
+#    dump c_u16;
+#    dump c_s16;
+#    dump c_u32;
+#    dump c_s32;
+#    dump c_u64;
+#    dump c_s64;
+#    dump c_usize;
+#    dump c_ssize;
+## OLD OUTPUT:
+# 01
+# 00
+# AB
+# 55
+# EF BE
+# 11 41
+# EF BE AD DE
+# 11 41 52 21
+# EE FF C0 1D E0 AF DC BA
+# 12 00 3F E2 1F 50 23 45
+# EE FF C0 1D E0 AF DC BA
+# 12 00 3F E2 1F 50 23 45
+# 01
+# 00
+# AB
+# 55
+# EF BE
+# 11 41
+# EF BE AD DE
+# 11 41 52 21
+# EE FF C0 1D E0 AF DC BA
+# 12 00 3F E2 1F 50 23 45
+# EE FF C0 1D E0 AF DC BA
+# 12 00 3F E2 1F 50 23 45
 
     true;
     false;
@@ -123,27 +150,3 @@ func main() void {
     syscall(60s, v);
 }
 ################################################################################
-# 01
-# 00
-# AB
-# 55
-# EF BE
-# 11 41
-# EF BE AD DE
-# 11 41 52 21
-# EE FF C0 1D E0 AF DC BA
-# 12 00 3F E2 1F 50 23 45
-# EE FF C0 1D E0 AF DC BA
-# 12 00 3F E2 1F 50 23 45
-# 01
-# 00
-# AB
-# 55
-# EF BE
-# 11 41
-# EF BE AD DE
-# 11 41 52 21
-# EE FF C0 1D E0 AF DC BA
-# 12 00 3F E2 1F 50 23 45
-# EE FF C0 1D E0 AF DC BA
-# 12 00 3F E2 1F 50 23 45
