@@ -1,0 +1,162 @@
+func nl() void {
+    # void-returning function that makes dump print a newline.
+}
+
+func main() void {
+    const t_bitor_t: bool = true | true;
+    const f_bitor_f: bool = false | false;
+    const t_bitor_f: bool = true | false;
+    const f_bitor_t: bool = false | true;
+
+    dump t_bitor_t;
+    dump f_bitor_f;
+    dump t_bitor_f;
+    dump f_bitor_t;
+    dump nl();
+    dump true | true;
+    dump false | false;
+    dump true | false;
+    dump false | true;
+    dump nl();
+
+    const byte_a: byte = 0xABu8;
+    const byte_b: byte = 0xFFu8;
+    const byte_c: byte = 0x00u8;
+    const byte_d: byte = 0b10101100u8;
+    const byte_e: byte = 0b11001010u8;
+    const byte_a_bitor_byte_a: byte = byte_a | byte_a;
+    const byte_a_bitor_byte_b: byte = byte_a | byte_b;
+    const byte_a_bitor_byte_c: byte = byte_a | byte_c;
+    const byte_d_bitor_byte_e: byte = byte_d | byte_e;
+
+    dump byte_a_bitor_byte_a;
+    dump byte_a_bitor_byte_b;
+    dump byte_a_bitor_byte_c;
+    dump byte_d_bitor_byte_e;
+    dump nl();
+    dump 0xABu8 | 0xABu8;
+    dump 0xABu8 | 0xFFu8;
+    dump 0xABu8 | 0x00u8;
+    dump 0b10101100u8 | 0b11001010u8;
+    dump nl();
+
+    const u32_a: u32 = 0xDEADBEEFu32;
+    const u32_b: u32 = 0xFFFFFFFFu32;
+    const u32_c: u32 = 0x00000000u32;
+    const u32_d: u32 = 0b10101100111100001111111100000000u32;
+    const u32_e: u32 = 0b11001010110011001111111100000000u32;
+    const u32_a_bitor_u32_a: u32 = u32_a | u32_a;
+    const u32_a_bitor_u32_b: u32 = u32_a | u32_b;
+    const u32_a_bitor_u32_c: u32 = u32_a | u32_c;
+    const u32_d_bitor_u32_e: u32 = u32_d | u32_e;
+
+    dump u32_a_bitor_u32_a;
+    dump u32_a_bitor_u32_b;
+    dump u32_a_bitor_u32_c;
+    dump u32_d_bitor_u32_e;
+    dump nl();
+    dump 0xDEADBEEFu32 | 0xDEADBEEFu32;
+    dump 0xDEADBEEFu32 | 0xFFFFFFFFu32;
+    dump 0xDEADBEEFu32 | 0x00000000u32;
+    dump 0b10101100111100001111111100000000u32 | 0b11001010110011001111111100000000u32;
+    dump nl();
+
+    const s8_a: s8 = -128s8; # 0x80 as s8
+    const s8_b: s8 = -1s8; # 0xFF as s8
+    const s8_c: s8 = 0s8; # 0x00 as s8
+    const s8_a_bitor_s8_a: s8 = s8_a | s8_a;
+    const s8_a_bitor_s8_b: s8 = s8_a | s8_b;
+    const s8_a_bitor_s8_c: s8 = s8_a | s8_c;
+
+    dump s8_a_bitor_s8_a;
+    dump s8_a_bitor_s8_b;
+    dump s8_a_bitor_s8_c;
+    dump nl();
+    dump -128s8 | -128s8;
+    dump -128s8 | -1s8;
+    dump -128s8 | 0s8;
+    dump nl();
+
+    const s16_a: s16 = -32768s16; # 0x8000 as s16
+    const s16_b: s16 = -1s16; # 0xFFFF as s16
+    const s16_c: s16 = 0s16; # 0x0000 as s16
+    const s16_d: s16 = -16657s16; # 0xBEEF as s16
+    const s16_e: s16 = 0x0123s16;
+    const s16_a_bitor_s16_a: s16 = s16_a | s16_a;
+    const s16_a_bitor_s16_b: s16 = s16_a | s16_b;
+    const s16_a_bitor_s16_c: s16 = s16_a | s16_c;
+    const s16_d_bitor_s16_b: s16 = s16_d | s16_b;
+    const s16_d_bitor_s16_c: s16 = s16_d | s16_c;
+    const s16_e_bitor_s16_b: s16 = s16_e | s16_b;
+    const s16_e_bitor_s16_c: s16 = s16_e | s16_c;
+
+    dump s16_a_bitor_s16_a;
+    dump s16_a_bitor_s16_b;
+    dump s16_a_bitor_s16_c;
+    dump s16_d_bitor_s16_b;
+    dump s16_d_bitor_s16_c;
+    dump s16_e_bitor_s16_b;
+    dump s16_e_bitor_s16_c;
+    dump nl();
+    dump -32768s16 | -32768s16;
+    dump -32768s16 | -1s16;
+    dump -32768s16 | 0s16;
+    dump -16657s16 | -1s16;
+    dump -16657s16 | 0s16;
+    dump 0x0123s16 | -1s16;
+    dump 0x0123s16 | 0s16;
+}
+################################################################################
+# 01
+# 00
+# 01
+# 01
+#
+# 01
+# 00
+# 01
+# 01
+#
+# AB
+# FF
+# AB
+# EE
+#
+# AB
+# FF
+# AB
+# EE
+#
+# EF BE AD DE
+# FF FF FF FF
+# EF BE AD DE
+# 00 FF FC EE
+#
+# EF BE AD DE
+# FF FF FF FF
+# EF BE AD DE
+# 00 FF FC EE
+#
+# 80
+# FF
+# 80
+#
+# 80
+# FF
+# 80
+#
+# 00 80
+# FF FF
+# 00 80
+# FF FF
+# EF BE
+# FF FF
+# 23 01
+#
+# 00 80
+# FF FF
+# 00 80
+# FF FF
+# EF BE
+# FF FF
+# 23 01

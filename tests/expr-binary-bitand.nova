@@ -65,7 +65,7 @@ func main() void {
     const s8_b: s8 = -1s8; # 0xFF as s8
     const s8_c: s8 = 0s8; # 0x00 as s8
     const s8_a_bitand_s8_a: s8 = s8_a & s8_a;
-    const s8_a_bitand_s8_b: s8 = s8_a & s8_a;
+    const s8_a_bitand_s8_b: s8 = s8_a & s8_b;
     const s8_a_bitand_s8_c: s8 = s8_a & s8_c;
 
     dump s8_a_bitand_s8_a;
@@ -83,7 +83,7 @@ func main() void {
     const s16_d: s16 = -16657s16; # 0xBEEF as s16
     const s16_e: s16 = 0x0123s16;
     const s16_a_bitand_s16_a: s16 = s16_a & s16_a;
-    const s16_a_bitand_s16_b: s16 = s16_a & s16_a;
+    const s16_a_bitand_s16_b: s16 = s16_a & s16_b;
     const s16_a_bitand_s16_c: s16 = s16_a & s16_c;
     const s16_d_bitand_s16_b: s16 = s16_d & s16_b;
     const s16_d_bitand_s16_c: s16 = s16_d & s16_c;

@@ -73,6 +73,7 @@
                 | <expr> "-" <expr>
                 | <expr> "*" <expr>
                 | <expr> "/" <expr>
+                | <expr> "|" <expr>
                 | <expr> "&" <expr>
 
 <block> ::= "{" <stmt>* "}"
