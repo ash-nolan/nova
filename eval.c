@@ -123,7 +123,7 @@ eval_expr(struct evaluator* evaluator, struct tir_expr const* expr)
             assert(rhs->type->kind == TYPE_BYTE || type_is_integer(rhs->type));
 
             if (rhs->type->kind == TYPE_BYTE) {
-                rhs->data.byte = ~rhs->data.byte;
+                rhs->data.byte = (uint8_t)~rhs->data.byte;
                 return rhs;
             }
 
