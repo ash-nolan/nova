@@ -58,6 +58,7 @@
 <expr-unary> ::= "not" <expr>
                | "+" <expr>
                | "-" <expr>
+               | "~" <expr>
                | "*" <expr>
                | "&" <expr>
 

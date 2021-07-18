@@ -1160,6 +1160,7 @@ codegen_rvalue_unary(struct tir_expr const* expr)
     switch (expr->data.unary.op) {
     case UOP_NOT: {
         codegen_rvalue(expr->data.unary.rhs);
+        assert(expr->data.unary.rhs->type->size <= 8u);
         appendli("pop rax");
         appendli("mov rbx, 0");
         appendli("cmp rax, rbx");
@@ -1173,8 +1174,17 @@ codegen_rvalue_unary(struct tir_expr const* expr)
     }
     case UOP_NEG: {
         codegen_rvalue(expr->data.unary.rhs);
+        assert(expr->data.unary.rhs->type->size <= 8u);
         appendli("pop rax");
         appendli("neg rax");
+        appendli("push rax");
+        return;
+    }
+    case UOP_BITNOT: {
+        codegen_rvalue(expr->data.unary.rhs);
+        assert(expr->data.unary.rhs->type->size <= 8u);
+        appendli("pop rax");
+        appendli("not rax");
         appendli("push rax");
         return;
     }
@@ -1521,6 +1531,7 @@ codegen_lvalue_unary(struct tir_expr const* expr)
     case UOP_NOT: /* fallthrough */
     case UOP_POS: /* fallthrough */
     case UOP_NEG: /* fallthrough */
+    case UOP_BITNOT: /* fallthrough */
     case UOP_ADDRESSOF: {
         UNREACHABLE();
     }

@@ -556,6 +556,7 @@ token_kind_nud(enum token_kind kind)
     case TOKEN_NOT: /* fallthrough */
     case TOKEN_PLUS: /* fallthrough */
     case TOKEN_DASH: /* fallthrough */
+    case TOKEN_TILDE: /* fallthrough */
     case TOKEN_STAR: /* fallthrough */
     case TOKEN_AMPERSAND:
         return parse_expr_nud_unary;

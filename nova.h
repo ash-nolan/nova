@@ -197,6 +197,7 @@ enum token_kind {
     TOKEN_DASH, // -
     TOKEN_STAR, // *
     TOKEN_FSLASH, // /
+    TOKEN_TILDE, // ~
     TOKEN_PIPE, // |
     TOKEN_CARET, // ^
     TOKEN_AMPERSAND, // &
@@ -853,6 +854,7 @@ struct tir_expr {
                 UOP_NOT,
                 UOP_POS,
                 UOP_NEG,
+                UOP_BITNOT,
                 UOP_DEREFERENCE,
                 UOP_ADDRESSOF,
             } op;

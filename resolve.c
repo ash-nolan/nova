@@ -98,6 +98,12 @@ resolve_expr_unary_arithmetic(
     enum uop_kind uop,
     struct tir_expr const* rhs);
 static struct tir_expr const*
+resolve_expr_unary_bitwise(
+    struct resolver* resolver,
+    struct token const* op,
+    enum uop_kind uop,
+    struct tir_expr const* rhs);
+static struct tir_expr const*
 resolve_expr_unary_dereference(
     struct resolver* resolver,
     struct token const* op,
@@ -1150,6 +1156,9 @@ resolve_expr_unary(struct resolver* resolver, struct ast_expr const* expr)
     case TOKEN_DASH: {
         return resolve_expr_unary_arithmetic(resolver, op, UOP_NEG, rhs);
     }
+    case TOKEN_TILDE: {
+        return resolve_expr_unary_bitwise(resolver, op, UOP_BITNOT, rhs);
+    }
     case TOKEN_STAR: {
         return resolve_expr_unary_dereference(resolver, op, rhs);
     }
@@ -1214,6 +1223,32 @@ resolve_expr_unary_arithmetic(
             token_kind_to_cstr(op->kind));
     }
 
+    struct tir_expr* const resolved =
+        tir_expr_new_unary(&op->location, rhs->type, uop, rhs);
+
+    autil_freezer_register(context()->freezer, resolved);
+    return resolved;
+}
+
+static struct tir_expr const*
+resolve_expr_unary_bitwise(
+    struct resolver* resolver,
+    struct token const* op,
+    enum uop_kind uop,
+    struct tir_expr const* rhs)
+{
+    assert(resolver != NULL);
+    assert(op != NULL);
+    assert(rhs != NULL);
+    trace(resolver->module->path, NO_LINE, "%s", __func__);
+
+    if (!(rhs->type->kind == TYPE_BYTE || type_is_integer(rhs->type))) {
+        fatal(
+            rhs->location->path,
+            rhs->location->line,
+            "cannot apply bitwise NOT to type `%s`",
+            rhs->type->name);
+    }
     struct tir_expr* const resolved =
         tir_expr_new_unary(&op->location, rhs->type, uop, rhs);
 

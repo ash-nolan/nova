@@ -119,6 +119,37 @@ eval_expr(struct evaluator* evaluator, struct tir_expr const* expr)
             autil_bigint_neg(rhs->data.integer, rhs->data.integer);
             return rhs;
         }
+        case UOP_BITNOT: {
+            assert(rhs->type->kind == TYPE_BYTE || type_is_integer(rhs->type));
+
+            if (rhs->type->kind == TYPE_BYTE) {
+                rhs->data.byte = ~rhs->data.byte;
+                return rhs;
+            }
+
+            bool is_signed = type_is_sinteger(rhs->type);
+            size_t bit_count = rhs->type->size * 8u;
+            struct autil_bitarr* const rhs_bits = autil_bitarr_new(bit_count);
+            struct autil_bitarr* const res_bits = autil_bitarr_new(bit_count);
+            if (bigint_to_bitarr(rhs_bits, rhs->data.integer)) {
+                UNREACHABLE();
+            }
+
+            for (size_t i = 0; i < bit_count; ++i) {
+                int const bit = !autil_bitarr_get(rhs_bits, i);
+                autil_bitarr_set(res_bits, i, bit);
+            }
+            autil_bitarr_del(rhs_bits);
+
+            struct autil_bigint* const res_bigint =
+                autil_bigint_new(AUTIL_BIGINT_ZERO);
+            bitarr_to_bigint(res_bigint, res_bits, is_signed);
+            autil_bitarr_del(res_bits);
+
+            struct value* const res = value_new_integer(rhs->type, res_bigint);
+            value_del(rhs);
+            return res;
+        }
         case UOP_DEREFERENCE: {
             fatal(
                 expr->location->path,
