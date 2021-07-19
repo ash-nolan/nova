@@ -1,0 +1,7 @@
+func main() void {
+    var x: ssize = 1s;
+    var y: usize = 2u;
+    x = y;
+}
+################################################################################
+# [error-illegal-type-conversion-in-assignment.nova:4] error: illegal implicit type conversion from `usize` to `ssize`

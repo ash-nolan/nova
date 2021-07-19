@@ -773,6 +773,7 @@ resolve_stmt_assign(struct resolver* resolver, struct ast_stmt const* stmt)
             lhs->location->line,
             "left hand side of assignment statement is not an lvalue");
     }
+    check_implicit_cast(stmt->location, rhs->type, lhs->type);
     struct tir_stmt* const resolved =
         tir_stmt_new_assign(stmt->location, lhs, rhs);
 
