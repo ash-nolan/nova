@@ -1,3 +1,7 @@
+const baz: ssize = bar + 1s;
+const foo: ssize = 1s;
+const bar: ssize = foo + 1s;
+
 func fn_a() void {
     fn_b();
 }
@@ -6,4 +10,11 @@ func fn_b() void {
 }
 
 func main() void {
+    dump foo;
+    dump bar;
+    dump baz;
 }
+################################################################################
+# 01 00 00 00 00 00 00 00
+# 02 00 00 00 00 00 00 00
+# 03 00 00 00 00 00 00 00
