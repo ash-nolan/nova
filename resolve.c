@@ -6,6 +6,12 @@
 
 #include "nova.h"
 
+struct incomplete_function {
+    struct ast_decl const* decl;
+    struct tir_function* function;
+    struct symbol_table* symbol_table;
+};
+
 struct resolver {
     struct module* module;
     struct tir_function* current_function; // NULL if not in a function.
@@ -13,6 +19,14 @@ struct resolver {
     // Current offset of rbp for stack allocated data. Initialized to zero at
     // the start of function resolution.
     int current_rbp_offset;
+
+    // Functions to be completed at the end of the resolve phase after all
+    // top-level declarations have been resolved. Incomplete functions defer
+    // having their body's resolved so that mutually recursive functions (e.g. f
+    // calls g and g calls f) have access to each others' symbols in the global
+    // symbol table without requiring one function to be fully defined before
+    // the other.
+    autil_sbuf(struct incomplete_function) incomplete_functions;
 };
 static struct resolver*
 resolver_new(struct module* module);
@@ -47,6 +61,9 @@ static struct symbol const*
 resolve_decl_constant(struct resolver* resolver, struct ast_decl const* decl);
 static struct symbol const*
 resolve_decl_function(struct resolver* resolver, struct ast_decl const* decl);
+static void
+complete_function(
+    struct resolver* resolver, struct incomplete_function const* incomplete);
 
 static struct tir_stmt const* // optional
 resolve_stmt(struct resolver* resolver, struct ast_stmt const* stmt);
@@ -172,6 +189,8 @@ static void
 resolver_del(struct resolver* self)
 {
     assert(self != NULL);
+
+    autil_sbuf_fini(self->incomplete_functions);
 
     memset(self, 0x00, sizeof(*self));
     autil_xalloc(self, AUTIL_XALLOC_FREE);
@@ -378,16 +397,16 @@ resolve_decl_function(struct resolver* resolver, struct ast_decl const* decl)
     }
     autil_sbuf_freeze(parameter_types, context()->freezer);
 
-    struct type const* return_type =
+    struct type const* const return_type =
         resolve_typespec(resolver, decl->data.function.return_typespec);
 
-    struct type const* type =
+    struct type const* function_type =
         type_unique_function(parameter_types, return_type);
 
     // Create a new incomplete function, a value that evaluates to that
     // function, and the address of that function/value.
     struct tir_function* const function =
-        tir_function_new(decl->data.function.identifier->name, type);
+        tir_function_new(decl->data.function.identifier->name, function_type);
     autil_freezer_register(context()->freezer, function);
 
     struct value* const value = value_new_function(function);
@@ -399,8 +418,8 @@ resolve_decl_function(struct resolver* resolver, struct ast_decl const* decl)
 
     // Add the function/value to the symbol table now so that recursive
     // functions may reference themselves.
-    struct symbol* const function_symbol =
-        symbol_new_function(decl->location, decl->name, type, address, value);
+    struct symbol* const function_symbol = symbol_new_function(
+        decl->location, decl->name, function_type, address, value);
     autil_freezer_register(context()->freezer, function_symbol);
     symbol_table_insert(resolver->current_symbol_table, function_symbol);
 
@@ -420,8 +439,7 @@ resolve_decl_function(struct resolver* resolver, struct ast_decl const* decl)
     for (size_t i = autil_sbuf_count(parameters); i--;) {
         struct source_location const* const location = parameters[i]->location;
         char const* const name = parameters[i]->identifier->name;
-        struct type const* const type =
-            resolve_typespec(resolver, parameters[i]->typespec);
+        struct type const* const type = parameter_types[i];
         struct address* const address =
             address_new(address_init_local(rbp_offset));
         autil_freezer_register(context()->freezer, address);
@@ -462,22 +480,39 @@ resolve_decl_function(struct resolver* resolver, struct ast_decl const* decl)
     symbol_table_insert(symbol_table, return_value_symbol);
     function->symbol_return = return_value_symbol;
 
+    struct incomplete_function const incomplete = {
+        decl,
+        function,
+        symbol_table,
+    };
+    autil_sbuf_push(resolver->incomplete_functions, incomplete);
+
+    return function_symbol;
+}
+
+static void
+complete_function(
+    struct resolver* resolver, struct incomplete_function const* incomplete)
+{
+    assert(resolver != NULL);
+    assert(incomplete != NULL);
+
     // Complete the function.
     assert(resolver->current_function == NULL);
     assert(resolver->current_symbol_table == context()->global_symbol_table);
     assert(resolver->current_rbp_offset == 0x0);
-    resolver->current_function = function;
-    function->body =
-        resolve_block(resolver, symbol_table, decl->data.function.body);
+    resolver->current_function = incomplete->function;
+    incomplete->function->body = resolve_block(
+        resolver,
+        incomplete->symbol_table,
+        incomplete->decl->data.function.body);
     resolver->current_function = NULL;
     assert(resolver->current_symbol_table == context()->global_symbol_table);
     assert(resolver->current_rbp_offset == 0x0);
 
     // Freeze the symbol table now that the function has been completed and no
     // new symbols will be added.
-    symbol_table_freeze(symbol_table, context()->freezer);
-
-    return function_symbol;
+    symbol_table_freeze(incomplete->symbol_table, context()->freezer);
 }
 
 static struct tir_stmt const*
@@ -1650,8 +1685,17 @@ resolve(struct module* module)
     trace(module->path, NO_LINE, "%s", __func__);
 
     struct resolver* const resolver = resolver_new(module);
-    for (size_t i = 0; i < autil_sbuf_count(module->ordered); ++i) {
+
+    autil_sbuf(struct ast_decl const* const) const ordered = module->ordered;
+    for (size_t i = 0; i < autil_sbuf_count(ordered); ++i) {
         resolve_decl(resolver, module->ordered[i]);
     }
+
+    autil_sbuf(struct incomplete_function const) incomplete =
+        resolver->incomplete_functions;
+    for (size_t i = 0; i < autil_sbuf_count(incomplete); ++i) {
+        complete_function(resolver, &incomplete[i]);
+    }
+
     resolver_del(resolver);
 }

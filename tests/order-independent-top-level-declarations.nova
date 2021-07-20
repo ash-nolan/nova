@@ -1,0 +1,9 @@
+func fn_a() void {
+    fn_b();
+}
+func fn_b() void {
+    fn_a();
+}
+
+func main() void {
+}
