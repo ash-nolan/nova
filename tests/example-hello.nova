@@ -4,13 +4,19 @@
 # ['48', '65', '6c', '6c', '6f', '2c', '20', '77', '6f', '72', '6c', '64', '21', '0a']
 # >>> len(s)
 # 14
-var hello: [14u]u8 = (:[14u]u8)[
+var hello: [14u]byte = (:[14u]byte)[
     0x48u8, 0x65u8, 0x6Cu8, 0x6Cu8, 0x6Fu8, 0x2Cu8, 0x20u8, 0x77u8,
     0x6Fu8, 0x72u8, 0x6Cu8, 0x64u8, 0x21u8, 0x0Au8
 ];
 
+func write(fd: ssize, buf: *byte, count: usize) void {
+    const SYS_WRITE: ssize = 1s;
+    syscall(SYS_WRITE, fd, buf, 14u);
+}
+
 func main() void {
-    syscall(1s, 1s, &hello, 14u);
+    const STDOUT_FILENO: ssize = 1s;
+    write(STDOUT_FILENO, &hello[0u], 14u);
 }
 ################################################################################
 # Hello, world!
