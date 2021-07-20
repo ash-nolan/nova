@@ -1,0 +1,20 @@
+func dump_byte(x: *byte) void {
+    dump *x;
+}
+
+func main() void {
+    var a: byte = 0xAu8;
+    var b: u8 = 0xBu8;
+    var c: u32 = 0xCu32;
+    var d: [2u]u8 = (:[2u]u8)[0xDu8, 0xFFu8];
+
+    dump_byte(&a);
+    dump_byte(&b);
+    dump_byte(&c);
+    dump_byte(&d);
+}
+################################################################################
+# 0A
+# 0B
+# 0C
+# 0D

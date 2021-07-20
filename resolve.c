@@ -228,8 +228,18 @@ is_valid_implicit_cast(struct type const* from, struct type const* to)
 {
     switch (to->kind) {
     case TYPE_BYTE: {
+        // byte => byte
+        // u8   => byte
+        // s8   => byte
         return from->kind == TYPE_BYTE || from->kind == TYPE_U8
             || from->kind == TYPE_S8;
+    }
+    case TYPE_POINTER: {
+        // *T   => *T
+        // *any => *byte
+        return to == from
+            || (to->data.pointer.base->kind == TYPE_BYTE
+                && from->kind == TYPE_POINTER);
     }
     case TYPE_VOID: /* fallthrough */
     case TYPE_BOOL: /* fallthrough */
@@ -244,7 +254,6 @@ is_valid_implicit_cast(struct type const* from, struct type const* to)
     case TYPE_USIZE: /* fallthrough */
     case TYPE_SSIZE: /* fallthrough */
     case TYPE_FUNCTION: /* fallthrough */
-    case TYPE_POINTER: /* fallthrough */
     case TYPE_ARRAY: {
         return from == to;
     }
@@ -1118,7 +1127,7 @@ resolve_expr_call(struct resolver* resolver, struct ast_expr const* expr)
     for (size_t i = 0; i < autil_sbuf_count(parameter_types); ++i) {
         struct type const* const expected = parameter_types[i];
         struct type const* const received = arguments[i]->type;
-        if (expected == received) {
+        if (is_valid_implicit_cast(received, expected)) {
             continue;
         }
         fatal(
