@@ -637,14 +637,15 @@ tir_expr_new_array(
 
 struct tir_expr*
 tir_expr_new_syscall(
-    struct source_location const* location, struct tir_expr const* const* exprs)
+    struct source_location const* location,
+    struct tir_expr const* const* arguments)
 {
     assert(location != NULL);
-    assert(exprs != NULL);
+    assert(arguments != NULL);
 
     struct tir_expr* const self =
         tir_expr_new(location, context()->builtin.ssize, TIR_EXPR_SYSCALL);
-    self->data.syscall.exprs = exprs;
+    self->data.syscall.arguments = arguments;
     return self;
 }
 

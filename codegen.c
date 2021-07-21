@@ -1030,10 +1030,11 @@ codegen_rvalue_syscall(struct tir_expr const* expr)
     assert(expr->kind == TIR_EXPR_SYSCALL);
     trace(NO_PATH, NO_LINE, "%s", __func__);
 
-    struct tir_expr const* const* const exprs = expr->data.syscall.exprs;
-    size_t const count = autil_sbuf_count(exprs);
+    struct tir_expr const* const* const arguments =
+        expr->data.syscall.arguments;
+    size_t const count = autil_sbuf_count(arguments);
     for (size_t i = 0; i < count; ++i) {
-        codegen_rvalue(exprs[i]);
+        codegen_rvalue(arguments[i]);
     }
 
     assert(count != 0);

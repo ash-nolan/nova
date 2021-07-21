@@ -837,7 +837,7 @@ struct tir_expr {
             autil_sbuf(struct tir_expr const* const) elements;
         } array;
         struct {
-            autil_sbuf(struct tir_expr const* const) exprs;
+            autil_sbuf(struct tir_expr const* const) arguments;
         } syscall;
         struct {
             // Expression resulting in a callable function.
@@ -901,7 +901,7 @@ tir_expr_new_array(
 struct tir_expr*
 tir_expr_new_syscall(
     struct source_location const* location,
-    struct tir_expr const* const* exprs);
+    struct tir_expr const* const* arguments);
 struct tir_expr*
 tir_expr_new_call(
     struct source_location const* location,
